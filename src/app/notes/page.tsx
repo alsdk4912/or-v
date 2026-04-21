@@ -1,14 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AppTabBar, HeaderHero, MobileFrame, SectionCard, StatusChip } from "@/components/mobile/design-system";
 import { Input } from "@/components/ui/input";
 import { getSurgeryCaseDetailById, surgeryCases } from "@/data/mock-surgeries";
 
 export default function NotesPage() {
+  const [caseId, setCaseId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setCaseId(params.get("caseId"));
+  }, []);
 
   const items = useMemo(() => {
     return surgeryCases
@@ -22,12 +28,16 @@ export default function NotesPage() {
           action: detail?.immediateActions[0] ?? "핵심 준비 항목 확인",
         };
       })
-      .filter((item) => `${item.surgeryName} ${item.surgeon} ${item.note}`.includes(query));
-  }, [query]);
+      .filter((item) => {
+        const matchesQuery = `${item.surgeryName} ${item.surgeon} ${item.note}`.includes(query);
+        const matchesCase = caseId ? item.id === caseId : true;
+        return matchesQuery && matchesCase;
+      });
+  }, [query, caseId]);
 
   return (
     <MobileFrame>
-      <HeaderHero title="기록 / 메모" subtitle="케이스 특이사항을 카드로 빠르게 조회" right={<StatusChip label={`${items.length}건`} tone="info" />} />
+      <HeaderHero title="기록 / 메모" subtitle={caseId ? `${caseId} 연동 메모` : "케이스 특이사항을 카드로 빠르게 조회"} right={<StatusChip label={`${items.length}건`} tone="info" />} />
       <SectionCard title="검색">
         <Input
           value={query}
