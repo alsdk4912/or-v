@@ -12,15 +12,15 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getSurgeryCaseById, getSurgeryCaseDetailById } from "@/data/mock-surgeries";
 
-export default async function SurgeryCaseDetailPage({
+export default function SurgeryCaseDetailPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  params: { id: string };
+  searchParams?: { tab?: string };
 }) {
-  const { id } = await params;
-  const { tab } = await searchParams;
+  const { id } = params;
+  const tab = searchParams?.tab;
   const surgery = getSurgeryCaseById(id);
   const detail = getSurgeryCaseDetailById(id);
 
