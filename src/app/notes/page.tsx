@@ -1,20 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { AppTabBar, HeaderHero, MobileFrame, SectionCard, StatusChip } from "@/components/mobile/design-system";
 import { Input } from "@/components/ui/input";
 import { getSurgeryCaseDetailById, surgeryCases } from "@/data/mock-surgeries";
 
 export default function NotesPage() {
-  const [caseId, setCaseId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setCaseId(params.get("caseId"));
-  }, []);
+  const caseId =
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("caseId") : null;
 
   const items = useMemo(() => {
     return surgeryCases

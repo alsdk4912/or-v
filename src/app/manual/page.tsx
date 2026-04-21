@@ -24,6 +24,14 @@ export default function ManualPage() {
       <Link href="/" className="inline-flex items-center gap-1 text-xs text-slate-600">
         <ArrowLeft className="size-3.5" /> 대시보드로 돌아가기
       </Link>
+      <section className="grid grid-cols-2 gap-2 rounded-2xl bg-white p-2">
+        <Link href="/manual" className="rounded-xl bg-blue-600 px-2 py-2 text-center text-xs font-semibold text-white">
+          매뉴얼
+        </Link>
+        <Link href="/preferences" className="rounded-xl bg-slate-100 px-2 py-2 text-center text-xs font-semibold text-slate-700">
+          교수 선호
+        </Link>
+      </section>
 
       <AppCard title="수술 선택">
         <Select value={caseId} onValueChange={(value) => value && setCaseId(value)}>

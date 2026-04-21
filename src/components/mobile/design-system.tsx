@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { BookOpenCheck, CalendarDays, Boxes, House, ShoppingCart, UserRoundCog } from "lucide-react";
+import { BookOpenCheck, CalendarDays, Boxes, House, ShoppingCart } from "lucide-react";
 
 export function MobileFrame({ children }: { children: ReactNode }) {
   return (
@@ -11,18 +11,17 @@ export function MobileFrame({ children }: { children: ReactNode }) {
 }
 
 const appTabs = [
-  { href: "/inventory", label: "재고", icon: Boxes },
-  { href: "/procurement", label: "발주", icon: ShoppingCart },
   { href: "/", label: "홈", icon: House },
   { href: "/schedule", label: "일정", icon: CalendarDays },
-  { href: "/manual", label: "매뉴얼", icon: BookOpenCheck },
-  { href: "/preferences", label: "교수선호", icon: UserRoundCog },
+  { href: "/manual", label: "매뉴얼·선호", icon: BookOpenCheck },
+  { href: "/inventory", label: "재고", icon: Boxes },
+  { href: "/procurement", label: "발주", icon: ShoppingCart },
 ];
 
 export function AppTabBar({ currentPath }: { currentPath: string }) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--app-border)] bg-white/95 backdrop-blur">
-      <div className="mx-auto grid w-full max-w-[420px] grid-cols-6 px-1 py-1">
+      <div className="mx-auto grid w-full max-w-[420px] grid-cols-5 px-1 py-1">
         {appTabs.map((tab) => {
           const active = currentPath === tab.href;
           const Icon = tab.icon;
