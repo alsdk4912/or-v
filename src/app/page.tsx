@@ -26,6 +26,8 @@ import {
   allSurgeons,
   surgeryCases,
 } from "@/data/mock-surgeries";
+import { getInventoryDashboardStats, getRecommendationForItem } from "@/lib/inventory-engine";
+import { itemMasters } from "@/data/inventory-mock";
 import type { PreparationStatus } from "@/types/dashboard";
 
 const prepFilterOptions: Array<PreparationStatus | "전체"> = ["전체", "준비완료", "검토필요", "누락", "중요"];
@@ -83,6 +85,16 @@ export default function DashboardPage() {
     [filteredCases],
   );
 
+  const inventoryStats = useMemo(() => getInventoryDashboardStats(), []);
+  const urgentRecommendations = useMemo(
+    () =>
+      itemMasters
+        .map((item) => ({ item, rec: getRecommendationForItem(item.item_id) }))
+        .filter((x) => x.rec.urgent_order_required)
+        .slice(0, 2),
+    [],
+  );
+
   return (
     <MobileFrame>
       <HeaderHero title="오늘 수술실 운영" subtitle="중요 케이스를 먼저 확인하고 바로 처리하세요." right={<StatusChip label={`${summary.total}건`} tone="info" />}>
@@ -123,6 +135,40 @@ export default function DashboardPage() {
         </div>
       </SectionCard>
 
+      <SectionCard title="재고/멸균 위험 요약">
+        <div className="grid grid-cols-2 gap-2">
+          <MiniHeroStat label="재고 부족 품목" value={inventoryStats.shortage} />
+          <MiniHeroStat label="유효기간 임박" value={inventoryStats.soonExpiry} />
+          <MiniHeroStat label="재멸균 필요" value={inventoryStats.sterilizationDue} />
+          <MiniHeroStat label="발주 추천" value={inventoryStats.orderNeeded} />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="AI 인사이트">
+        <div className="space-y-2">
+          <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3 text-xs text-blue-800">
+            다음주 정형외과 수술 증가로 봉합사 사용량 증가가 예상됩니다.
+          </div>
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-3 text-xs text-amber-800">
+            이번 주 멸균 만료 품목 {inventoryStats.sterilizationDue}건으로 우선 사용/재멸균 처리가 필요합니다.
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="긴급 수술 우선 대응 품목">
+        <div className="space-y-2">
+          {urgentRecommendations.map(({ item, rec }) => (
+            <div key={item.item_id} className="rounded-2xl border border-rose-100 bg-rose-50 p-3">
+              <p className="text-sm font-semibold text-rose-700">{item.item_name}</p>
+              <p className="mt-1 text-xs text-rose-700">
+                긴급발주 권고 {rec.recommended_order_qty}
+                {item.unit} · 사유: {rec.risk_factors[0]}
+              </p>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
       <SectionCard title="빠른 필터">
         <div className="space-y-3">
           <FilterSelect label="수술실" value={roomFilter} onChange={setRoomFilter} options={["전체", ...allOperatingRooms]} />
@@ -152,7 +198,9 @@ export default function DashboardPage() {
 
       <section className="grid grid-cols-2 gap-2 pb-24">
         <NavPill href="/schedule" label="전체 일정 보기" />
-        <NavPill href="/checklists" label="체크리스트 바로가기" />
+        <NavPill href="/inventory" label="재고 바로가기" />
+        <NavPill href="/procurement" label="발주 바로가기" />
+        <NavPill href="/sterilization" label="멸균/유효기간" />
       </section>
       <AppTabBar currentPath="/" />
     </MobileFrame>

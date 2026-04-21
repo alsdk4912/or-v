@@ -11,6 +11,7 @@ import {
 } from "@/components/mobile/design-system";
 import { Badge } from "@/components/ui/badge";
 import { getSurgeryCaseById, getSurgeryCaseDetailById } from "@/data/mock-surgeries";
+import { getCaseItemStatus } from "@/lib/inventory-engine";
 
 export default function SurgeryCaseDetailPage({
   params,
@@ -29,6 +30,7 @@ export default function SurgeryCaseDetailPage({
   }
 
   const section = tab ?? "요약";
+  const requiredItems = getCaseItemStatus(surgery.id);
 
   return (
     <MobileFrame>
@@ -73,6 +75,25 @@ export default function SurgeryCaseDetailPage({
                 </li>
               ))}
             </ul>
+          </SectionCard>
+          <SectionCard title="준비물-재고 연계" subtitle="부족/임박/멸균 상태를 함께 확인">
+            <div className="space-y-2">
+              {requiredItems.map((req) => (
+                <div key={req.item_id} className="rounded-xl border border-[var(--app-border)] bg-white px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-900">{req.item_name}</p>
+                    <StatusChip label={req.risk} tone={req.risk === "부족" ? "danger" : req.risk === "부족 우려" ? "warn" : "ok"} />
+                  </div>
+                  <p className="mt-1 text-xs text-slate-600">
+                    필요 {req.required_qty}개 · FEFO 추천로트 {req.fefo_lot_id} ({req.lot_status})
+                  </p>
+                  <p className="mt-1 text-xs text-blue-700">다음 조치: {req.urgent_action}</p>
+                  {req.substitute_items.length > 0 && (
+                    <p className="mt-1 text-xs text-amber-700">대체 가능: {req.substitute_items.join(", ")}</p>
+                  )}
+                </div>
+              ))}
+            </div>
           </SectionCard>
           <InfoListCard title="필요 재료" items={detail.requiredMaterials} />
           <InfoListCard title="필요 장비" items={detail.requiredEquipment} />
@@ -130,6 +151,13 @@ export default function SurgeryCaseDetailPage({
             <p className="text-sm text-slate-600">
               완료 항목: {surgery.checklist.completedCount}/{surgery.checklist.totalCount}
             </p>
+          </SectionCard>
+          <SectionCard title="수술 전 재고/멸균 확인">
+            <ul className="space-y-2 text-sm text-slate-700">
+              <li className="rounded-md bg-slate-50 px-3 py-2">[ ] 준비물 확보 완료 확인</li>
+              <li className="rounded-md bg-slate-50 px-3 py-2">[ ] 멸균 확인 완료</li>
+              <li className="rounded-md bg-slate-50 px-3 py-2">[ ] 유효기간 임박 품목 FEFO 우선 사용 확인</li>
+            </ul>
           </SectionCard>
           <InfoListCard title="다음 단계 안내" items={detail.nextStepGuidance} />
         </>

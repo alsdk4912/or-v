@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { CalendarDays, ClipboardCheck, House, NotebookPen, Settings } from "lucide-react";
+import { CalendarDays, Boxes, House, Settings, ShoppingCart } from "lucide-react";
 
 export function MobileFrame({ children }: { children: ReactNode }) {
   return (
@@ -13,9 +13,9 @@ export function MobileFrame({ children }: { children: ReactNode }) {
 const appTabs = [
   { href: "/", label: "홈", icon: House },
   { href: "/schedule", label: "일정", icon: CalendarDays },
-  { href: "/checklists", label: "체크", icon: ClipboardCheck },
-  { href: "/notes", label: "기록", icon: NotebookPen },
-  { href: "/settings", label: "설정", icon: Settings },
+  { href: "/inventory", label: "재고", icon: Boxes },
+  { href: "/procurement", label: "발주", icon: ShoppingCart },
+  { href: "/settings", label: "더보기", icon: Settings },
 ];
 
 export function AppTabBar({ currentPath }: { currentPath: string }) {
