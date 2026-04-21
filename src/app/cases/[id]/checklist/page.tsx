@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { AlertTriangle, ArrowLeft, RotateCcw } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Mic, MicOff, RotateCcw } from "lucide-react";
 
 import {
   BottomCTABar,
@@ -16,7 +16,13 @@ import {
 import { checklistStageOrder } from "@/data/checklist-templates";
 import { getSurgeryCaseById } from "@/data/mock-surgeries";
 import { useChecklistStore } from "@/store/checklist-store";
-import type { ChecklistStageName } from "@/types/checklist";
+import type {
+  CaseChecklistState,
+  ChecklistItemState,
+  ChecklistStageName,
+  ChecklistStageState,
+  VoiceCommandLog,
+} from "@/types/checklist";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,10 +34,27 @@ export default function ChecklistExecutionPage() {
   const caseId = params.id;
   const surgery = getSurgeryCaseById(caseId);
 
-  const { cases, initializeCase, toggleItem, completeStage, resetCase, getGateReason } =
+  const {
+    cases,
+    initializeCase,
+    toggleItem,
+    completeStage,
+    resetCase,
+    getGateReason,
+    processVoiceTranscript,
+    pendingVoice,
+    confirmPendingVoice,
+    rejectPendingVoice,
+    voiceSetting,
+    updateVoiceSetting,
+    voiceListening,
+    setVoiceListening,
+  } =
     useChecklistStore();
   const [selectedStage, setSelectedStage] = useState<ChecklistStageName>("Sign In");
   const [blockMessage, setBlockMessage] = useState<string | null>(null);
+  const [panelTab, setPanelTab] = useState<"체크리스트" | "음성로그" | "설정">("체크리스트");
+  const [mockVoiceText, setMockVoiceText] = useState("");
 
   useEffect(() => {
     if (caseId) {
@@ -51,19 +74,20 @@ export default function ChecklistExecutionPage() {
     );
   }
 
-  const caseState = cases[caseId];
+  const caseState = cases[caseId] as CaseChecklistState | undefined;
   if (!caseState) {
     return null;
   }
 
-  const selected = caseState.stages[selectedStage];
-  const completedItems = selected.items.filter((item) => item.completed).length;
-  const requiredTotal = selected.items.filter((item) => item.required).length;
-  const requiredCompleted = selected.items.filter((item) => item.required && item.completed).length;
+  const selected: ChecklistStageState = caseState.stages[selectedStage];
+  const completedItems = selected.items.filter((item: ChecklistItemState) => item.completed).length;
+  const requiredTotal = selected.items.filter((item: ChecklistItemState) => item.required).length;
+  const requiredCompleted = selected.items.filter((item: ChecklistItemState) => item.required && item.completed).length;
 
   const totalItems = checklistStageOrder.reduce((acc, stage) => acc + caseState.stages[stage].items.length, 0);
   const doneItems = checklistStageOrder.reduce(
-    (acc, stage) => acc + caseState.stages[stage].items.filter((item) => item.completed).length,
+    (acc, stage) =>
+      acc + caseState.stages[stage].items.filter((item: ChecklistItemState) => item.completed).length,
     0,
   );
   const progress = Math.round((doneItems / totalItems) * 100);
@@ -104,6 +128,20 @@ export default function ChecklistExecutionPage() {
     }
   };
 
+  const handleMockVoice = () => {
+    const confidence = 0.9;
+    const result = processVoiceTranscript({
+      caseId,
+      roomId: surgery.operatingRoom,
+      transcript: mockVoiceText,
+      confidence,
+      actor: demoActor,
+    });
+    if (!result.ok) setBlockMessage(result.reason ?? "음성 반영 실패");
+    else setBlockMessage(result.reason ?? null);
+    setMockVoiceText("");
+  };
+
   return (
     <MobileFrame>
       <HeaderHero
@@ -139,6 +177,48 @@ export default function ChecklistExecutionPage() {
           <div className="mt-3 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-700">
             진행 원칙: Sign In 필수 완료 → Time Out 진행 → Time Out 필수 완료 → Sign Out 진행
           </div>
+          <div className="mt-3 rounded-xl border border-[var(--app-border)] bg-white p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-900">Voice Checklist Mode</p>
+              <button
+                type="button"
+                onClick={() => setVoiceListening(!voiceListening)}
+                className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold ${
+                  voiceListening ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-700"
+                }`}
+              >
+                {voiceListening ? <Mic className="size-3.5" /> : <MicOff className="size-3.5" />}
+                {voiceListening ? "수신중" : "일시정지"}
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-slate-600">
+              케이스 {surgery.surgeryName} · 수술실 {surgery.operatingRoom} · 현재 단계 {selectedStage}
+            </p>
+            <div className="mt-2 flex gap-2">
+              <input
+                value={mockVoiceText}
+                onChange={(e) => setMockVoiceText(e.target.value)}
+                placeholder="예: 환자 확인 완료, 사인인 완료"
+                className="h-10 flex-1 rounded-lg border border-slate-200 px-2 text-xs"
+              />
+              <Button className="h-10 rounded-lg" onClick={handleMockVoice}>
+                명령 실행
+              </Button>
+            </div>
+            {pendingVoice && (
+              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+                &quot;{pendingVoice.transcript_text}&quot; 인식됨 ({Math.round(pendingVoice.confidence_score * 100)}%)
+                <div className="mt-2 flex gap-2">
+                  <Button size="sm" className="h-8" onClick={() => confirmPendingVoice(caseId, demoActor)}>
+                    반영
+                  </Button>
+                  <Button size="sm" variant="secondary" className="h-8" onClick={rejectPendingVoice}>
+                    취소
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
       </SectionCard>
 
       <SectionCard title="단계 선택">
@@ -170,6 +250,21 @@ export default function ChecklistExecutionPage() {
         )}
 
         <section className="grid gap-4">
+          <section className="grid grid-cols-3 gap-2">
+            {(["체크리스트", "음성로그", "설정"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setPanelTab(tab)}
+                className={`rounded-xl px-2 py-2 text-xs font-semibold ${
+                  panelTab === tab ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </section>
+          {panelTab === "체크리스트" && (
           <Card className="rounded-[22px] border-0 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
@@ -217,31 +312,92 @@ export default function ChecklistExecutionPage() {
 
             </CardContent>
           </Card>
+          )}
 
-          <Card className="rounded-[22px] border-0 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-            <CardHeader>
-              <CardTitle>완료 로그 이력</CardTitle>
-              <CardDescription>최신순으로 표시됩니다.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {caseState.logs.length === 0 && (
-                <p className="text-sm text-slate-500">아직 기록된 로그가 없습니다.</p>
-              )}
-              {caseState.logs.map((log) => (
-                <div key={log.id} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
-                  <p className="text-xs font-semibold text-slate-900">{log.action}</p>
-                  <p className="text-xs text-slate-700">{log.detail}</p>
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    {log.stage} | {log.actor} | {log.timestamp}
-                  </p>
+          {panelTab === "음성로그" && (
+            <Card className="rounded-[22px] border-0 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+              <CardHeader>
+                <CardTitle>음성 반영 로그</CardTitle>
+                <CardDescription>인식된 명령과 결과를 확인합니다.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {caseState.voiceLogs.length === 0 && <p className="text-sm text-slate-500">아직 음성 로그가 없습니다.</p>}
+                {caseState.voiceLogs.map((log: VoiceCommandLog) => (
+                  <div key={log.voice_log_id} className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                    <p className="text-xs font-semibold text-slate-900">{log.transcript_text}</p>
+                    <p className="text-xs text-slate-700">
+                      intent: {log.detected_intent} | 결과: {log.action_result} | 신뢰도 {Math.round(log.confidence_score * 100)}%
+                    </p>
+                    <p className="mt-1 text-[11px] text-slate-500">{log.captured_at}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {panelTab === "설정" && (
+            <Card className="rounded-[22px] border-0 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+              <CardHeader>
+                <CardTitle>음성 설정</CardTitle>
+                <CardDescription>자동반영 안전 정책을 설정합니다.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <ToggleRow
+                  label="음성 체크 모드"
+                  value={voiceSetting.enabled}
+                  onToggle={() => updateVoiceSetting({ enabled: !voiceSetting.enabled })}
+                />
+                <ToggleRow
+                  label="조건부 자동반영"
+                  value={voiceSetting.auto_apply_enabled}
+                  onToggle={() => updateVoiceSetting({ auto_apply_enabled: !voiceSetting.auto_apply_enabled })}
+                />
+                <ToggleRow
+                  label="웨이크워드 사용"
+                  value={voiceSetting.wake_word_enabled}
+                  onToggle={() => updateVoiceSetting({ wake_word_enabled: !voiceSetting.wake_word_enabled })}
+                />
+                <div>
+                  <p className="text-xs text-slate-500">신뢰도 임계치: {voiceSetting.confidence_threshold.toFixed(2)}</p>
+                  <input
+                    type="range"
+                    min={0.6}
+                    max={0.99}
+                    step={0.01}
+                    value={voiceSetting.confidence_threshold}
+                    onChange={(e) => updateVoiceSetting({ confidence_threshold: Number(e.target.value) })}
+                    className="w-full"
+                  />
                 </div>
-              ))}
-            </CardContent>
-          </Card>
+                <Button variant="secondary" className="h-9" onClick={() => setVoiceListening(true)}>
+                  테스트 시작
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </section>
 
       <BottomCTABar label={`${selectedStage} 단계 완료 처리`} onClick={handleCompleteStage} />
     </MobileFrame>
+  );
+}
+
+function ToggleRow({
+  label,
+  value,
+  onToggle,
+}: {
+  label: string;
+  value: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button type="button" onClick={onToggle} className="flex w-full items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-left">
+      <span>{label}</span>
+      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${value ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-600"}`}>
+        {value ? "ON" : "OFF"}
+      </span>
+    </button>
   );
 }
 

@@ -3,12 +3,17 @@
 import { create } from "zustand";
 
 import { checklistStageOrder, checklistTemplates } from "@/data/checklist-templates";
+import { parseVoiceIntent } from "@/lib/voice-intent-parser";
+import { getCaseItemStatus } from "@/lib/inventory-engine";
 import type {
   CaseChecklistState,
+  ChecklistActionHistory,
   ChecklistItemState,
   ChecklistLogEntry,
   ChecklistStageName,
   ChecklistStageState,
+  VoiceCommandLog,
+  VoiceSetting,
 } from "@/types/checklist";
 
 function toKstTimeString(date: Date) {
@@ -42,7 +47,7 @@ function createInitialCaseState(caseId: string): CaseChecklistState {
     };
   });
 
-  return { caseId, stages, logs: [] };
+  return { caseId, stages, logs: [], voiceLogs: [], actionHistory: [] };
 }
 
 function allRequiredCompleted(stage: ChecklistStageState) {
@@ -90,6 +95,9 @@ function gateReason(caseState: CaseChecklistState, stage: ChecklistStageName): s
 
 interface ChecklistStore {
   cases: Record<string, CaseChecklistState>;
+  voiceSetting: VoiceSetting;
+  pendingVoice: VoiceCommandLog | null;
+  voiceListening: boolean;
   initializeCase: (caseId: string) => void;
   toggleItem: (params: {
     caseId: string;
@@ -104,10 +112,64 @@ interface ChecklistStore {
   }) => { ok: boolean; reason?: string };
   resetCase: (caseId: string, actor: string) => void;
   getGateReason: (caseId: string, stage: ChecklistStageName) => string | null;
+  processVoiceTranscript: (params: {
+    caseId: string;
+    roomId: string;
+    transcript: string;
+    confidence: number;
+    actor: string;
+  }) => { ok: boolean; reason?: string };
+  confirmPendingVoice: (caseId: string, actor: string) => { ok: boolean; reason?: string };
+  rejectPendingVoice: () => void;
+  undoLastVoiceAction: (caseId: string, actor: string) => { ok: boolean; reason?: string };
+  updateVoiceSetting: (patch: Partial<VoiceSetting>) => void;
+  setVoiceListening: (value: boolean) => void;
 }
 
-export const useChecklistStore = create<ChecklistStore>((set, get) => ({
+export const useChecklistStore = create<ChecklistStore>((set, get) => {
+  const applyVoiceIntent = (
+    caseId: string,
+    intent: VoiceCommandLog["detected_intent"],
+    targetStep: ChecklistStageName | null,
+    targetItemId: string | null,
+    actor: string,
+  ) => {
+    const voiceActor = `${actor}(음성)`;
+    if (intent === "step_complete" && targetStep) {
+      return get().completeStage({ caseId, stage: targetStep, actor: voiceActor });
+    }
+    if (intent === "step_start" && targetStep) {
+      const reason = get().getGateReason(caseId, targetStep);
+      return reason ? { ok: false, reason } : { ok: true };
+    }
+    if (intent === "item_check" && targetItemId) {
+      if (targetItemId === "si-5") {
+        const blocked = getCaseItemStatus(caseId).some((r) => r.risk === "부족");
+        if (blocked) return { ok: false, reason: "재고 부족 상태로 준비물 확보 완료를 반영할 수 없습니다." };
+      }
+      const current = get().cases[caseId];
+      if (!current) return { ok: false, reason: "케이스 없음" };
+      const stage = checklistStageOrder.find((s) => current.stages[s].items.some((i) => i.id === targetItemId));
+      if (!stage) return { ok: false, reason: "항목 매핑 실패" };
+      return get().toggleItem({ caseId, stage, itemId: targetItemId, actor: voiceActor });
+    }
+    return { ok: false, reason: "지원하지 않는 명령" };
+  };
+
+  return ({
   cases: {},
+  voiceSetting: {
+    enabled: true,
+    auto_apply_enabled: false,
+    wake_word_enabled: true,
+    wake_word_text: "오알 플래너",
+    confidence_threshold: 0.86,
+    language: "ko-KR",
+    noise_filter_enabled: true,
+    mode: "wake_word",
+  },
+  pendingVoice: null,
+  voiceListening: true,
 
   initializeCase: (caseId) => {
     set((state) => {
@@ -182,6 +244,7 @@ export const useChecklistStore = create<ChecklistStore>((set, get) => ({
         detail: `${targetItem.label} ${targetItem.completed ? "완료 취소" : "완료 처리"}`,
       };
 
+      const sourceType = actor.includes("음성") ? "voice" : "manual";
       return {
         cases: {
           ...state.cases,
@@ -192,6 +255,19 @@ export const useChecklistStore = create<ChecklistStore>((set, get) => ({
               [stage]: updatedStage,
             },
             logs: [log, ...caseState.logs],
+            actionHistory: [
+              {
+                action_history_id: `${caseId}-${itemId}-${now.getTime()}`,
+                case_id: caseId,
+                checklist_item_id: itemId,
+                action_type: targetItem.completed ? "uncheck" : "check",
+                source_type: sourceType,
+                performed_at: timestamp,
+                performed_by: actor,
+                note: "항목 상태 변경",
+              },
+              ...caseState.actionHistory,
+            ],
           },
         },
       };
@@ -246,6 +322,7 @@ export const useChecklistStore = create<ChecklistStore>((set, get) => ({
         detail: `${stage} 단계 완료`,
       };
 
+      const sourceType = actor.includes("음성") ? "voice" : "manual";
       return {
         cases: {
           ...state.cases,
@@ -256,6 +333,19 @@ export const useChecklistStore = create<ChecklistStore>((set, get) => ({
               [stage]: updatedStage,
             },
             logs: [log, ...caseState.logs],
+            actionHistory: [
+              {
+                action_history_id: `${caseId}-${stage}-complete-${now.getTime()}`,
+                case_id: caseId,
+                checklist_item_id: stage,
+                action_type: "step_complete",
+                source_type: sourceType,
+                performed_at: timestamp,
+                performed_by: actor,
+                note: `${stage} 단계 완료`,
+              } as ChecklistActionHistory,
+              ...caseState.actionHistory,
+            ],
           },
         },
       };
@@ -294,4 +384,105 @@ export const useChecklistStore = create<ChecklistStore>((set, get) => ({
     }
     return gateReason(current, stage);
   },
-}));
+
+  processVoiceTranscript: ({ caseId, roomId, transcript, confidence, actor }) => {
+    const current = get().cases[caseId];
+    if (!current) return { ok: false, reason: "체크리스트 상태를 찾을 수 없습니다." };
+    const setting = get().voiceSetting;
+    if (!setting.enabled) return { ok: false, reason: "음성 체크 모드가 비활성화되었습니다." };
+
+    const parsed = parseVoiceIntent(transcript);
+    const timestamp = toKstTimeString(new Date());
+    const mode =
+      confidence >= setting.confidence_threshold && setting.auto_apply_enabled ? "auto" : confidence >= 0.62 ? "confirm" : "manual";
+    const baseLog: VoiceCommandLog = {
+      voice_log_id: `${caseId}-${Date.now()}`,
+      case_id: caseId,
+      room_id: roomId,
+      captured_at: timestamp,
+      transcript_text: transcript,
+      normalized_text: parsed.normalized,
+      detected_intent: parsed.intent,
+      target_step: parsed.targetStep,
+      target_item: parsed.targetItemId,
+      confidence_score: confidence,
+      action_mode: mode,
+      action_result: "ignored",
+      actor_type: "system",
+      auto_applied: false,
+    };
+
+    const registerLog = (log: VoiceCommandLog) =>
+      set((state) => {
+        const caseState = state.cases[caseId];
+        if (!caseState) return state;
+        return {
+          cases: {
+            ...state.cases,
+            [caseId]: { ...caseState, voiceLogs: [log, ...caseState.voiceLogs] },
+          },
+        };
+      });
+
+    if (parsed.intent === "none") {
+      registerLog(baseLog);
+      return { ok: false, reason: "명령으로 인식되지 않았습니다." };
+    }
+
+    if (parsed.intent === "pause_voice") {
+      set({ voiceListening: false });
+      registerLog({ ...baseLog, action_result: "success" });
+      return { ok: true };
+    }
+    if (parsed.intent === "resume_voice") {
+      set({ voiceListening: true });
+      registerLog({ ...baseLog, action_result: "success" });
+      return { ok: true };
+    }
+    if (parsed.intent === "undo_last") {
+      registerLog(baseLog);
+      return get().undoLastVoiceAction(caseId, actor);
+    }
+
+    if (mode === "confirm") {
+      set({ pendingVoice: baseLog });
+      registerLog({ ...baseLog, action_result: "confirmed" });
+      return { ok: true, reason: "확인 대기 중" };
+    }
+
+    const applyResult = applyVoiceIntent(caseId, parsed.intent, parsed.targetStep, parsed.targetItemId, actor);
+    registerLog({ ...baseLog, action_result: applyResult.ok ? "success" : "rejected", auto_applied: applyResult.ok });
+    return applyResult;
+  },
+
+  confirmPendingVoice: (caseId, actor) => {
+    const pending = get().pendingVoice;
+    if (!pending || pending.case_id !== caseId) return { ok: false, reason: "확인할 음성 명령이 없습니다." };
+    const result = applyVoiceIntent(caseId, pending.detected_intent, pending.target_step, pending.target_item, actor);
+    set({ pendingVoice: null });
+    return result;
+  },
+
+  rejectPendingVoice: () => set({ pendingVoice: null }),
+
+  undoLastVoiceAction: (caseId, actor) => {
+    const current = get().cases[caseId];
+    if (!current) return { ok: false, reason: "케이스 상태 없음" };
+    const last = current.actionHistory.find((h) => h.source_type === "voice");
+    if (!last) return { ok: false, reason: "취소할 음성 반영 이력이 없습니다." };
+    if (last.action_type === "check") {
+      const stage = checklistStageOrder.find((s) => current.stages[s].items.some((i) => i.id === last.checklist_item_id));
+      if (!stage) return { ok: false, reason: "원본 항목 없음" };
+      return get().toggleItem({ caseId, stage, itemId: last.checklist_item_id, actor: `${actor}(음성취소)` });
+    }
+    return { ok: false, reason: "해당 작업은 자동 취소를 지원하지 않습니다." };
+  },
+
+  updateVoiceSetting: (patch) =>
+    set((state) => ({
+      voiceSetting: { ...state.voiceSetting, ...patch },
+    })),
+
+  setVoiceListening: (value) => set({ voiceListening: value }),
+  });
+});
