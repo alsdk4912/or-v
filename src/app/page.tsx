@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Clock3 } from "lucide-react";
+import { AlertTriangle, Clock3 } from "lucide-react";
 
 import {
+  AppTabBar,
   HeaderHero,
   MobileFrame,
   RoundedActionCard,
@@ -23,7 +24,6 @@ import {
   allDepartments,
   allOperatingRooms,
   allSurgeons,
-  getSurgeryCaseDetailById,
   surgeryCases,
 } from "@/data/mock-surgeries";
 import type { PreparationStatus } from "@/types/dashboard";
@@ -70,7 +70,7 @@ export default function DashboardPage() {
     );
   }, [filteredCases]);
 
-  const priorityQueue = useMemo(
+  const criticalQueue = useMemo(
     () =>
       filteredCases
         .filter((item) => item.flags.missingSupplies || item.flags.emergency || item.checklist.blockedByStage !== "없음")
@@ -78,20 +78,9 @@ export default function DashboardPage() {
     [filteredCases],
   );
 
-  const quickLookups = useMemo(
-    () =>
-      priorityQueue.map((item) => {
-        const detail = getSurgeryCaseDetailById(item.id);
-        return {
-          id: item.id,
-          surgeryName: item.surgeryName,
-          room: item.operatingRoom,
-          materials: detail?.requiredMaterials.slice(0, 2) ?? [],
-          equipment: detail?.requiredEquipment.slice(0, 2) ?? [],
-          location: detail?.equipmentLocations[0]?.location ?? "위치 정보 없음",
-        };
-      }),
-    [priorityQueue],
+  const inProgressCases = useMemo(
+    () => filteredCases.filter((item) => item.surgeryStatus === "준비중" || item.surgeryStatus === "지연위험").slice(0, 3),
+    [filteredCases],
   );
 
   return (
@@ -104,9 +93,9 @@ export default function DashboardPage() {
         </div>
       </HeaderHero>
 
-      <SectionCard title="지금 해야 할 일" subtitle="우선순위 케이스">
+      <SectionCard title="오늘의 핵심 액션" subtitle="우선순위 케이스">
         <div className="space-y-2">
-          {priorityQueue.map((item) => (
+          {criticalQueue.slice(0, 3).map((item) => (
             <RoundedActionCard
               key={item.id}
               title={`${item.surgeryName} (${item.operatingRoom})`}
@@ -119,20 +108,22 @@ export default function DashboardPage() {
         </div>
       </SectionCard>
 
-      <SectionCard title="빠른 조회" subtitle="재료 · 장비 · 위치">
+      <SectionCard title="긴급/중요 알림">
         <div className="space-y-2">
-          {quickLookups.map((item) => (
-            <div key={item.id} className="rounded-2xl bg-[#f5f8ff] p-3">
-              <p className="text-sm font-semibold">{item.surgeryName}</p>
-              <p className="mt-1 text-sm text-slate-700">재료: {item.materials.join(", ")}</p>
-              <p className="text-sm text-slate-700">장비: {item.equipment.join(", ")}</p>
-              <p className="text-sm text-blue-700">위치: {item.location}</p>
+          {criticalQueue.slice(0, 2).map((item) => (
+            <div key={item.id} className="rounded-2xl border border-rose-100 bg-rose-50 p-3">
+              <p className="flex items-center gap-1 text-sm font-semibold text-rose-700">
+                <AlertTriangle className="size-4" /> {item.surgeryName}
+              </p>
+              <p className="mt-1 text-xs text-rose-700">
+                {item.operatingRoom} · {item.scheduledTime} · {item.checklist.blockedByStage}
+              </p>
             </div>
           ))}
         </div>
       </SectionCard>
 
-      <SectionCard title="필터">
+      <SectionCard title="빠른 필터">
         <div className="space-y-3">
           <FilterSelect label="수술실" value={roomFilter} onChange={setRoomFilter} options={["전체", ...allOperatingRooms]} />
           <FilterSelect label="진료과" value={deptFilter} onChange={setDeptFilter} options={["전체", ...allDepartments]} />
@@ -141,9 +132,9 @@ export default function DashboardPage() {
         </div>
       </SectionCard>
 
-      <SectionCard title="오늘 수술 일정" subtitle={`체크리스트 평균 ${avgChecklistProgress}%`}>
+      <SectionCard title="진행 중 케이스" subtitle={`체크리스트 평균 ${avgChecklistProgress}%`}>
         <div className="space-y-2">
-          {filteredCases.map((surgery) => (
+          {inProgressCases.map((surgery) => (
             <Link key={surgery.id} href={`/cases/${surgery.id}`} className="block rounded-2xl bg-[#f5f8ff] p-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold">{surgery.surgeryName}</p>
@@ -159,12 +150,11 @@ export default function DashboardPage() {
         </div>
       </SectionCard>
 
-      <section className="grid grid-cols-4 gap-2 pb-2">
-        <NavPill href="/" label="대시보드" />
-        <NavPill href="/manual" label="매뉴얼" />
-        <NavPill href="/preferences" label="교수차이" />
-        <NavPill href="/admin" label="관리" />
+      <section className="grid grid-cols-2 gap-2 pb-24">
+        <NavPill href="/schedule" label="전체 일정 보기" />
+        <NavPill href="/checklists" label="체크리스트 바로가기" />
       </section>
+      <AppTabBar currentPath="/" />
     </MobileFrame>
   );
 }
@@ -180,7 +170,7 @@ function MiniHeroStat({ label, value }: { label: string; value: number }) {
 
 function NavPill({ href, label }: { href: string; label: string }) {
   return (
-    <Link href={href} className="rounded-xl bg-white px-2 py-2 text-center text-xs font-medium text-slate-700">
+    <Link href={href} className="rounded-xl bg-white px-2 py-3 text-center text-sm font-semibold text-slate-700">
       {label}
     </Link>
   );

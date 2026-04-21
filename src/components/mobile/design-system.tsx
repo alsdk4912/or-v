@@ -1,11 +1,45 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { CalendarDays, ClipboardCheck, House, NotebookPen, Settings } from "lucide-react";
 
 export function MobileFrame({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-[var(--app-bg)]">
       <main className="mx-auto w-full max-w-[420px] space-y-4 px-4 py-5">{children}</main>
     </div>
+  );
+}
+
+const appTabs = [
+  { href: "/", label: "홈", icon: House },
+  { href: "/schedule", label: "일정", icon: CalendarDays },
+  { href: "/checklists", label: "체크", icon: ClipboardCheck },
+  { href: "/notes", label: "기록", icon: NotebookPen },
+  { href: "/settings", label: "설정", icon: Settings },
+];
+
+export function AppTabBar({ currentPath }: { currentPath: string }) {
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--app-border)] bg-white/95 backdrop-blur">
+      <div className="mx-auto grid w-full max-w-[420px] grid-cols-5 px-2 py-1">
+        {appTabs.map((tab) => {
+          const active = currentPath === tab.href;
+          const Icon = tab.icon;
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={`flex flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold ${
+                active ? "bg-blue-50 text-blue-700" : "text-slate-500"
+              }`}
+            >
+              <Icon className="size-4" />
+              <span>{tab.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
 
