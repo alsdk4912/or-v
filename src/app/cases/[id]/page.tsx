@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getSurgeryCaseById, getSurgeryCaseDetailById } from "@/data/mock-surgeries";
 import { getCaseItemStatus } from "@/lib/inventory-engine";
+import { UsageScanner } from "./usage-scanner";
 
 export default function SurgeryCaseDetailPage({
   params,
@@ -42,6 +43,9 @@ export default function SurgeryCaseDetailPage({
       <Link href="/" className="inline-flex items-center gap-1 text-xs text-slate-600">
         <ArrowLeft className="size-3.5" /> 대시보드로 돌아가기
       </Link>
+      <div className="flex justify-end">
+        <UsageScanner caseId={surgery.id} />
+      </div>
 
       <section className="sticky top-2 z-10 grid grid-cols-4 gap-2 rounded-2xl bg-white/95 p-2 backdrop-blur">
         <SegmentTab href={`/cases/${surgery.id}?tab=요약`} label="요약" active={section === "요약"} />

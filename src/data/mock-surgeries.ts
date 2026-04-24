@@ -380,6 +380,26 @@ const anesthesiaByDepartment: Record<Department, SurgeryCaseDetail["anesthesiaTy
   비뇨의학과: "전신마취",
 };
 
+const surgeonReadySummaryMap: Record<string, string[]> = {
+  "김도윤 교수": ["임플란트 사이즈 트레이를 우측 순서대로 선배치", "절개 전 기구 카운트 2회 구두 확인"],
+  "이승민 교수": ["카메라 화이트밸런스 재확인 후 포트 위치 브리핑", "절개 직전 30초 팀 브리핑 필수"],
+  "정태훈 교수": ["신경모니터링 baseline 2회 확인 후 시작", "현미경 초점 세팅 완료 후 견인기 전달"],
+  "윤하린 교수": ["출혈 대응 세트 접근성 우선 배치", "Time Out에서 응급 전환 시나리오 재확인"],
+  "최재현 교수": ["흡인팁 예비세트 2개를 테이블 좌측 고정", "드레이핑 경계선 표시 후 절개 준비"],
+  "박준서 교수": ["관류 라인 누수 테스트 후 레이저 준비", "안전안경 착용 구두 체크 후 장비 활성화"],
+  "남기백 교수": ["C-arm 각도 고정 후 골절 정복 확인", "전달 템포 일정 유지하도록 기구 순서 고정"],
+  "심주원 교수": ["표본 라벨을 절개 직후 1차 확인", "봉합 재료 2종을 테이블 좌측 선배치"],
+};
+
+const procedureByDepartment: Record<Department, string[]> = {
+  정형외과: ["환자 포지셔닝 및 C-arm 위치 고정", "절개 후 관절 노출 및 병변 확인", "임플란트 삽입, 정렬 확인, 지혈 후 봉합"],
+  외과: ["복강경 포트 삽입 및 시야 확보", "병변 확인 후 절제/결찰 진행", "세척, 지혈, 포트 제거 및 봉합"],
+  신경외과: ["두부 고정 및 현미경/모니터링 세팅 확인", "병변 접근 및 미세기구 절제 단계 진행", "지혈 확인 후 층별 봉합 및 신경기능 재확인"],
+  산부인과: ["포지셔닝 및 수술부위 소독/드레이핑", "자궁/부속기 병변 노출 후 절제", "출혈 점검 후 층별 봉합 및 회복실 인계"],
+  이비인후과: ["내시경/현미경 시야 세팅", "병변 절제 또는 교정 단계 진행", "지혈 및 패킹 후 최종 카운트"],
+  비뇨의학과: ["내시경 또는 레이저 장비 세팅 확인", "결석/병변 제거 및 관류 상태 점검", "스텐트/도뇨 상태 확인 후 종료"],
+};
+
 export function getSurgeryCaseById(caseId: string) {
   return surgeryCases.find((item) => item.id === caseId);
 }
@@ -407,9 +427,8 @@ export function getSurgeryCaseDetailById(caseId: string): SurgeryCaseDetail | un
     anesthesiaType: anesthesiaByDepartment[base.department],
     currentChecklistStage: stage,
     immediateActions: [
+      ...(surgeonReadySummaryMap[base.surgeon] ?? [`집도의(${base.surgeon}) 요청 세팅 재점검`]),
       `${base.operatingRoom} 멸균 영역 최종 확인`,
-      `집도의(${base.surgeon}) 요청 세팅 재점검`,
-      "Sign In 필수 항목 누락 여부 즉시 확인",
     ],
     requiredMaterials: departmentMaterialMap[base.department],
     requiredEquipment: departmentEquipmentMap[base.department],
@@ -419,6 +438,7 @@ export function getSurgeryCaseDetailById(caseId: string): SurgeryCaseDetail | un
       { title: "감염 관리", summary: "무균 필드 유지와 기구 카운트 이중 확인 절차를 준수합니다." },
       { title: "팀 커뮤니케이션", summary: "절개 전 브리핑과 단계별 구두 콜아웃을 표준으로 수행합니다." },
     ],
+    procedureManual: procedureByDepartment[base.department],
     surgeonDifferences: [
       {
         title: "교수별 선호",

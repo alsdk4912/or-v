@@ -70,6 +70,7 @@ export interface SurgeryCaseDetail {
   requiredEquipment: string[];
   equipmentLocations: Array<{ equipment: string; location: string }>;
   standardManualSummary: ManualSummary[];
+  procedureManual: string[];
   surgeonDifferences: CaseDetailSection[];
   nextStepGuidance: string[];
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, BriefcaseMedical, Landmark } from "lucide-react";
+import { ArrowLeft, BriefcaseMedical } from "lucide-react";
 
 import { AppCard, BlueHero, MobileAppShell } from "@/components/mobile/app-shell";
 import {
@@ -53,27 +53,6 @@ export default function SurgeonPreferenceComparisonClient() {
           <ValueCard title="집중 수술 영역" value={profile.procedureFocus} />
           <ValueCard title="관리 중 선호 프로토콜" value={`${profile.comparisonRows.length}개 항목`} />
         </div>
-      </AppCard>
-
-      <AppCard title="사업적 가치">
-        <div className="flex items-center gap-2">
-          <Landmark className="size-4 text-blue-700" />
-          <h2 className="text-sm font-semibold text-blue-900">사업적 가치</h2>
-        </div>
-        <ul className="mt-3 space-y-2">
-          <li className="rounded-md border border-blue-200 bg-white px-3 py-2 text-sm text-slate-700">
-            표준 vs 변형을 분리 표시해 신규/숙련 간호사 모두 같은 기준으로 준비
-          </li>
-          <li className="rounded-md border border-blue-200 bg-white px-3 py-2 text-sm text-slate-700">
-            교수별 요구사항을 구조화해 누락/재세팅으로 인한 준비 지연 감소
-          </li>
-          <li className="rounded-md border border-blue-200 bg-white px-3 py-2 text-sm text-slate-700">
-            케이스 전 브리핑 품질을 균질화해 팀 커뮤니케이션 편차 완화
-          </li>
-          <li className="rounded-md border border-blue-200 bg-white px-3 py-2 text-sm text-slate-700">
-            병원 운영 관점에서 프로토콜 관리 체계가 있다는 신뢰 확보
-          </li>
-        </ul>
       </AppCard>
 
       <section className="space-y-3 pb-2">

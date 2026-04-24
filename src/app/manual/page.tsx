@@ -11,8 +11,10 @@ import { getSurgeryCaseDetailById, surgeryCases } from "@/data/mock-surgeries";
 
 export default function ManualPage() {
   const [caseId, setCaseId] = useState(surgeryCases[0]?.id ?? "");
+  const [detailTab, setDetailTab] = useState<"매뉴얼" | "카메라세트점검">("매뉴얼");
   const [activeEquipment, setActiveEquipment] = useState<string | null>(null);
   const [mapTarget, setMapTarget] = useState<{ equipment: string; location: string } | null>(null);
+  const [visionMode, setVisionMode] = useState<"대기" | "누락탐지" | "AR라벨">("대기");
   const detail = getSurgeryCaseDetailById(caseId);
   const surgery = surgeryCases.find((item) => item.id === caseId);
 
@@ -50,10 +52,24 @@ export default function ManualPage() {
         </Select>
       </AppCard>
 
-      <AppCard title={surgery.surgeryName} subtitle="신규/숙련 모두를 위한 핵심 가이드">
-        <Accordion defaultValue={["ready"]}>
+      <section className="grid grid-cols-2 gap-2 rounded-2xl bg-white p-2">
+        {(["매뉴얼", "카메라세트점검"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setDetailTab(tab)}
+            className={`rounded-xl px-2 py-2 text-center text-xs font-semibold ${detailTab === tab ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`}
+          >
+            {tab}
+          </button>
+        ))}
+      </section>
+
+      {detailTab === "매뉴얼" && (
+        <AppCard title={surgery.surgeryName} subtitle="신규/숙련 모두를 위한 핵심 가이드">
+          <Accordion defaultValue={["ready", "procedure"]}>
           <AccordionItem value="ready">
-            <AccordionTrigger>준비 요약</AccordionTrigger>
+            <AccordionTrigger>핵심 준비사항 / 특이 수술과정 요약</AccordionTrigger>
             <AccordionContent>
               <p>{detail.immediateActions.join(", ")}</p>
             </AccordionContent>
@@ -73,14 +89,9 @@ export default function ManualPage() {
                   return (
                     <div key={equipment} className="rounded-xl border border-slate-200 bg-slate-50 p-2">
                       <div className="flex items-center justify-between gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setActiveEquipment(equipment)}
-                          className="inline-flex items-center gap-1 text-sm font-semibold text-slate-900 underline decoration-dotted underline-offset-2"
-                        >
-                          <PlayCircle className="size-4 text-blue-600" />
-                          {equipment}
-                        </button>
+                        <p className="text-sm font-semibold text-slate-900">{equipment}</p>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between gap-2">
                         <button
                           type="button"
                           onClick={() => location && setMapTarget(location)}
@@ -90,6 +101,14 @@ export default function ManualPage() {
                           <MapPin className="size-3.5" />
                           위치찾기
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveEquipment(equipment)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2 py-1 text-[11px] font-semibold text-white"
+                        >
+                          <PlayCircle className="size-3.5 text-blue-200" />
+                          간단사용 동영상
+                        </button>
                       </div>
                       <p className="mt-1 text-xs text-slate-600">{location ? location.location : "위치 정보 없음"}</p>
                     </div>
@@ -98,20 +117,53 @@ export default function ManualPage() {
               </div>
             </AccordionContent>
           </AccordionItem>
-          <AccordionItem value="safe">
-            <AccordionTrigger>안전·감염·실수 방지 포인트</AccordionTrigger>
+          <AccordionItem value="procedure">
+            <AccordionTrigger>수술 매뉴얼 생성 (프로시저)</AccordionTrigger>
             <AccordionContent>
-              <p>환자 식별·수술부위·알레르기 확인을 첫 단계에서 마칩니다. 무균 필드 이탈 징후를 즉시 공유합니다.</p>
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="why">
-            <AccordionTrigger>왜 중요한가</AccordionTrigger>
-            <AccordionContent>
-              <p>표준화된 준비와 교수별 차이 반영을 동시에 수행하면 준비 누락, 재세팅, 단계 지연을 줄일 수 있습니다.</p>
+              <ul className="space-y-1">
+                {detail.procedureManual.map((step) => (
+                  <li key={step} className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm text-slate-700">
+                    {step}
+                  </li>
+                ))}
+              </ul>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
-      </AppCard>
+        </AppCard>
+      )}
+
+      {detailTab === "카메라세트점검" && (
+        <AppCard title="카메라 세트 점검 (AI/AR 데모)">
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setVisionMode("누락탐지")} className="rounded-xl bg-rose-600 px-2 py-2 text-xs font-semibold text-white">
+                누락 탐지
+              </button>
+              <button type="button" onClick={() => setVisionMode("AR라벨")} className="rounded-xl bg-emerald-600 px-2 py-2 text-xs font-semibold text-white">
+                AR 라벨
+              </button>
+            </div>
+            <div className="relative h-44 rounded-2xl border border-slate-200 bg-slate-100">
+              <div className="absolute left-4 top-5 rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">세트 트레이 뷰</div>
+              {visionMode === "누락탐지" && (
+                <>
+                  <div className="absolute left-[58%] top-[52%] rounded-lg border-2 border-rose-500 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700">
+                    retractor 1개 누락
+                  </div>
+                  <span className="absolute left-[60%] top-[38%] inline-flex size-8 animate-ping rounded-full bg-rose-400 opacity-75" />
+                </>
+              )}
+              {visionMode === "AR라벨" && (
+                <>
+                  <div className="absolute left-[14%] top-[35%] rounded-md bg-emerald-600/90 px-2 py-1 text-[11px] font-semibold text-white">흡인기: 혈액/체액 제거</div>
+                  <div className="absolute left-[40%] top-[58%] rounded-md bg-blue-600/90 px-2 py-1 text-[11px] font-semibold text-white">Retractor: 시야 확보</div>
+                </>
+              )}
+            </div>
+          </div>
+        </AppCard>
+      )}
 
       {mapTarget && (
         <AppCard title={`${mapTarget.equipment} 위치`} subtitle="장비실 레이아웃(데모)">
