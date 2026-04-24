@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { Bell, Brain, CalendarClock, Clock3, PackageSearch, ShieldAlert, ShoppingCart } from "lucide-react";
+import { AlertTriangle, Bell, Brain, CalendarClock, Clock3, PackageSearch, ShieldAlert, ShoppingCart } from "lucide-react";
 
 import {
   AppTabBar,
@@ -34,6 +34,14 @@ export default function DashboardPage() {
 
   const inventoryStats = useMemo(() => getInventoryDashboardStats(), []);
   const orderNeedCount = inventoryStats.orderNeeded;
+  const blockedCount = useMemo(
+    () => surgeryCases.filter((item) => item.checklist.blockedByStage !== "없음").length,
+    [],
+  );
+  const missingRiskCount = useMemo(
+    () => surgeryCases.filter((item) => item.flags.missingSupplies).length,
+    [],
+  );
   const todayLabel = useMemo(
     () =>
       new Intl.DateTimeFormat("ko-KR", {
@@ -81,16 +89,21 @@ export default function DashboardPage() {
             <HeroChip label="진행" value={`${summary.inProgressCount}`} />
             <HeroChip label="발주" value={`${orderNeedCount}`} />
           </div>
+          <div className="mt-2 rounded-xl border border-white/20 bg-white/10 px-2 py-2">
+            <p className="flex items-center gap-1 text-xs font-semibold">
+              <AlertTriangle className="size-3.5" />
+              핵심: 체크리스트 게이팅 + 누락 방지
+            </p>
+            <p className="mt-1 text-[11px] text-blue-100">차단 상태 {blockedCount}건 · 누락 위험 {missingRiskCount}건을 우선 통제</p>
+          </div>
         </section>
 
         <section className="rounded-2xl bg-white p-2 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-          <div className="grid grid-cols-3 gap-1.5">
-            <KpiCard label="오늘 수술" value={summary.total} tone="info" />
-            <KpiCard label="재고 부족" value={inventoryStats.shortage} tone={inventoryStats.shortage > 0 ? "danger" : "ok"} />
-            <KpiCard label="임박" value={inventoryStats.soonExpiry} tone={inventoryStats.soonExpiry > 0 ? "warn" : "ok"} />
-            <KpiCard label="멸균" value={inventoryStats.sterilizationDue} tone={inventoryStats.sterilizationDue > 0 ? "warn" : "ok"} />
-            <KpiCard label="발주 필요" value={inventoryStats.orderNeeded} tone={inventoryStats.orderNeeded > 0 ? "warn" : "ok"} />
-            <KpiCard label="긴급 대응" value={urgentRecommendations.length} tone={urgentRecommendations.length > 0 ? "danger" : "ok"} />
+          <div className="grid grid-cols-1 gap-1.5">
+            <DetectionCard label={`오늘 준비 누락 위험 ${missingRiskCount}건`} tone={missingRiskCount > 0 ? "danger" : "ok"} />
+            <DetectionCard label={`재고 부족 예상 ${inventoryStats.shortage}건`} tone={inventoryStats.shortage > 0 ? "warn" : "ok"} />
+            <DetectionCard label={`발주 필요 ${inventoryStats.orderNeeded}건`} tone={inventoryStats.orderNeeded > 0 ? "warn" : "ok"} />
+            <DetectionCard label={`체크리스트 차단 상태 ${blockedCount}건`} tone={blockedCount > 0 ? "danger" : "ok"} />
           </div>
         </section>
 
@@ -98,7 +111,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-5 gap-1.5">
             <QuickAction href="/inventory" label="재고" icon={<PackageSearch className="size-3.5" />} />
             <QuickAction href="/procurement" label="발주" icon={<ShoppingCart className="size-3.5" />} />
-            <QuickAction href="/inventory" label="AI" icon={<Brain className="size-3.5" />} />
+            <QuickAction href="/analytics" label="데이터" icon={<Brain className="size-3.5" />} />
             <QuickAction href="/sterilization" label="멸균" icon={<ShieldAlert className="size-3.5" />} />
             <QuickAction href="/schedule" label="일정" icon={<CalendarClock className="size-3.5" />} />
           </div>
@@ -193,32 +206,18 @@ function HeroChip({ label, value }: { label: string; value: string }) {
   );
 }
 
-function KpiCard({
+function DetectionCard({
   label,
-  value,
   tone,
 }: {
   label: string;
-  value: number;
-  tone: "ok" | "warn" | "danger" | "info";
+  tone: "ok" | "warn" | "danger";
 }) {
   return (
-    <div className="rounded-lg border border-[var(--app-border)] bg-slate-50 px-1.5 py-1.5">
-      <p className="truncate text-[10px] text-slate-600">{label}</p>
-      <p className="mt-0.5 text-sm font-semibold leading-none text-slate-900">{value}</p>
-      <span
-        className={`mt-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
-          tone === "ok"
-            ? "bg-emerald-100 text-emerald-700"
-            : tone === "warn"
-              ? "bg-amber-100 text-amber-700"
-              : tone === "danger"
-                ? "bg-rose-100 text-rose-700"
-                : "bg-blue-100 text-blue-700"
-        }`}
-      >
-        {tone === "ok" ? "정상" : tone === "warn" ? "주의" : tone === "danger" ? "위험" : "정보"}
-      </span>
+    <div className={`rounded-lg border px-2 py-2 text-xs font-semibold ${
+      tone === "danger" ? "border-rose-200 bg-rose-50 text-rose-700" : tone === "warn" ? "border-amber-200 bg-amber-50 text-amber-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"
+    }`}>
+      {label}
     </div>
   );
 }
