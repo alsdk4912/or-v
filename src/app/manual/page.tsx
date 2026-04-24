@@ -15,6 +15,7 @@ export default function ManualPage() {
   const [activeEquipment, setActiveEquipment] = useState<string | null>(null);
   const [mapTarget, setMapTarget] = useState<{ equipment: string; location: string } | null>(null);
   const [visionMode, setVisionMode] = useState<"대기" | "누락탐지" | "AR라벨">("대기");
+  const [showProcedurePopup, setShowProcedurePopup] = useState(false);
   const detail = getSurgeryCaseDetailById(caseId);
   const surgery = surgeryCases.find((item) => item.id === caseId);
 
@@ -120,13 +121,16 @@ export default function ManualPage() {
           <AccordionItem value="procedure">
             <AccordionTrigger>수술 매뉴얼 생성 (프로시저)</AccordionTrigger>
             <AccordionContent>
-              <ul className="space-y-1">
-                {detail.procedureManual.map((step) => (
-                  <li key={step} className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm text-slate-700">
-                    {step}
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-2">
+                <p className="text-xs text-slate-600">절개/다이섹션/지혈/봉합 순서 포함 상세 버전</p>
+                <button
+                  type="button"
+                  onClick={() => setShowProcedurePopup(true)}
+                  className="w-full rounded-xl bg-blue-600 py-2 text-xs font-semibold text-white"
+                >
+                  상세 프로시저 팝업 열기
+                </button>
+              </div>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
@@ -202,6 +206,27 @@ export default function ManualPage() {
               <source src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" type="video/mp4" />
             </video>
             <p className="mt-2 text-xs text-slate-600">핵심: 전원 확인 → 멸균 커버 장착 → 교정/초점 확인 후 사용 시작</p>
+          </div>
+        </section>
+      )}
+
+      {showProcedurePopup && (
+        <section className="fixed inset-0 z-40 flex items-end bg-slate-900/45">
+          <div className="max-h-[82vh] w-full rounded-t-3xl bg-white p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-sm font-semibold">{surgery.surgeryName} 상세 프로시저</h3>
+              <button type="button" onClick={() => setShowProcedurePopup(false)} className="rounded-lg bg-slate-100 p-1.5 text-slate-700">
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="space-y-2 overflow-y-auto pr-1">
+              {detail.procedureManual.map((step, index) => (
+                <div key={step} className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2">
+                  <p className="text-[11px] font-semibold text-blue-700">STEP {index + 1}</p>
+                  <p className="mt-1 text-sm text-slate-700">{step}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}

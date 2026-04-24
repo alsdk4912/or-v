@@ -392,12 +392,46 @@ const surgeonReadySummaryMap: Record<string, string[]> = {
 };
 
 const procedureByDepartment: Record<Department, string[]> = {
-  정형외과: ["환자 포지셔닝 및 C-arm 위치 고정", "절개 후 관절 노출 및 병변 확인", "임플란트 삽입, 정렬 확인, 지혈 후 봉합"],
-  외과: ["복강경 포트 삽입 및 시야 확보", "병변 확인 후 절제/결찰 진행", "세척, 지혈, 포트 제거 및 봉합"],
-  신경외과: ["두부 고정 및 현미경/모니터링 세팅 확인", "병변 접근 및 미세기구 절제 단계 진행", "지혈 확인 후 층별 봉합 및 신경기능 재확인"],
-  산부인과: ["포지셔닝 및 수술부위 소독/드레이핑", "자궁/부속기 병변 노출 후 절제", "출혈 점검 후 층별 봉합 및 회복실 인계"],
-  이비인후과: ["내시경/현미경 시야 세팅", "병변 절제 또는 교정 단계 진행", "지혈 및 패킹 후 최종 카운트"],
-  비뇨의학과: ["내시경 또는 레이저 장비 세팅 확인", "결석/병변 제거 및 관류 상태 점검", "스텐트/도뇨 상태 확인 후 종료"],
+  정형외과: [
+    "피부 마킹 후 #10 blade로 skin incision, Metzenbaum으로 subcutaneous dissection 진행",
+    "Fascia 노출 뒤 Bovie coagulation mode로 hemostasis 하며 layer dissection",
+    "Capsulotomy 후 femoral head 노출, neck cut 시행 뒤 trial stem 삽입",
+    "Acetabular reamer 단계별 확장, cup impactor로 cup 고정 후 liner 체결",
+    "Trial reduction으로 leg length/offset 확인, 최종 stem/head 삽입 후 ROM 재검증",
+    "Pulse lavage 세척, drain 여부 확인 후 fascia-subQ-skin 순서로 층별 봉합",
+  ],
+  외과: [
+    "Umbilical 포트 진입 전 #11 blade로 소절개, Veress/직접 삽입 후 pneumoperitoneum 형성",
+    "카메라 포트 시야 확보 후 working port 2~3개 추가 삽입",
+    "Bovie hook 또는 ultrasonic device로 주변 조직 dissection 및 혈관/관 결찰",
+    "검체 분리 후 endobag 회수, irrigation-suction으로 출혈점 재확인",
+    "포트 제거 전 CO2 배출, fascia closure 필요 부위 봉합 후 skin closure",
+  ],
+  신경외과: [
+    "핀 고정 후 scalp marking, #10 blade incision 및 Raney clip으로 출혈 조절",
+    "Bovie와 periosteal elevator로 scalp flap 반전, burr hole 및 craniotomy 시행",
+    "Dura opening 후 현미경 하 미세 dissection, 병변 절제 단계 진행",
+    "Bipolar coagulation으로 hemostasis 유지, 필요 시 hemostatic agent 적용",
+    "Dura closure 및 bone flap fixation, galea/skin 층별 봉합 후 드레싱",
+  ],
+  산부인과: [
+    "수술 부위 소독 후 #10 blade로 skin incision, 전기소작기로 subQ dissection",
+    "근막/복막 층 접근 후 병변 확인, bipolar/ligasure로 혈관 처리",
+    "병변 절제 후 specimen labeling, 출혈점 재확인 및 세척",
+    "복벽 층별 봉합 후 skin closure, uterotonic/회복실 인계 항목 확인",
+  ],
+  이비인후과: [
+    "내시경 세팅 후 국소 infiltration, #15 blade로 점막 절개",
+    "미세기구와 suction-bovie로 병변 주위 점막/조직 dissection",
+    "출혈점 bipolar coagulation, 필요 시 packing material 적용",
+    "최종 시야 확인 후 패킹 고정, specimen 및 카운트 완료 확인",
+  ],
+  비뇨의학과: [
+    "내시경 진입 전 guidewire 위치 확인, sheath 삽입",
+    "병변 접근 후 laser fiber로 fragmentation 또는 절제 진행",
+    "지속 관류 상태에서 suction/바스켓으로 잔여물 회수",
+    "stent/도뇨관 위치 확인 후 출혈 및 누출 여부 점검, 종료 기록",
+  ],
 };
 
 export function getSurgeryCaseById(caseId: string) {

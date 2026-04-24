@@ -14,15 +14,16 @@ import { getSurgeryCaseById, getSurgeryCaseDetailById } from "@/data/mock-surger
 import { getCaseItemStatus } from "@/lib/inventory-engine";
 import { UsageScanner } from "./usage-scanner";
 
-export default function SurgeryCaseDetailPage({
+export default async function SurgeryCaseDetailPage({
   params,
   searchParams,
 }: {
-  params: { id: string };
-  searchParams?: { tab?: string };
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ tab?: string }>;
 }) {
-  const { id } = params;
-  const tab = searchParams?.tab;
+  const { id } = await params;
+  const parsedSearchParams = searchParams ? await searchParams : undefined;
+  const tab = parsedSearchParams?.tab;
   const surgery = getSurgeryCaseById(id);
   const detail = getSurgeryCaseDetailById(id);
 
