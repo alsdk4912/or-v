@@ -87,8 +87,9 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl bg-white p-2 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-          <div className="grid grid-cols-4 gap-1">
+        <section className="rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_4px_14px_rgba(15,23,42,0.06)]">
+          <div className="mb-1 px-1 text-center text-[11px] font-semibold tracking-tight text-slate-500">문제 탐지</div>
+          <div className="grid grid-cols-4 gap-1.5">
             <DetectionRow label="준비누락 위험" value={missingRiskCount} tone={missingRiskCount > 0 ? "danger" : "ok"} />
             <DetectionRow label="재고부족 예상" value={inventoryStats.shortage} tone={inventoryStats.shortage > 0 ? "warn" : "ok"} />
             <DetectionRow label="발주 필요" value={inventoryStats.orderNeeded} tone={inventoryStats.orderNeeded > 0 ? "warn" : "ok"} />
@@ -96,8 +97,8 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-blue-100 bg-blue-50 p-2">
-          <Link href="/analytics" className="inline-flex w-full items-center justify-center gap-1 rounded-lg bg-white px-2 py-2 text-xs font-semibold text-blue-700">
+        <section className="rounded-2xl border border-blue-100 bg-gradient-to-b from-blue-50 to-white p-2 shadow-[0_4px_14px_rgba(37,99,235,0.08)]">
+          <Link href="/analytics" className="inline-flex w-full items-center justify-center gap-1 rounded-xl border border-blue-200 bg-white px-2 py-2.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-50">
             <BarChart3 className="size-3.5" />
             데이터
           </Link>
@@ -202,11 +203,11 @@ function DetectionRow({
   tone: "ok" | "warn" | "danger";
 }) {
   return (
-    <div className={`flex min-h-11 items-center justify-between rounded-lg border px-2 py-2 text-xs ${
+    <div className={`flex min-h-12 flex-col items-center justify-center rounded-xl border px-1 py-1.5 text-center ${
       tone === "danger" ? "border-rose-200 bg-rose-50 text-rose-700" : tone === "warn" ? "border-amber-200 bg-amber-50 text-amber-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"
     }`}>
-      <p className="pr-1 text-[10px] font-semibold leading-tight">{label}</p>
-      <span className="shrink-0 rounded-full bg-white/80 px-1.5 py-0.5 text-[10px] font-bold">{value}</span>
+      <p className="text-[10px] font-semibold leading-tight">{label}</p>
+      <span className="mt-1 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold shadow-sm">{value}</span>
     </div>
   );
 }
