@@ -134,7 +134,7 @@ export function StatusChip({
           : tone === "info"
             ? "bg-blue-100 text-blue-700"
             : "bg-slate-100 text-slate-700";
-  return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${cls}`}>{label}</span>;
+  return <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${cls}`}>{label}</span>;
 }
 
 export function BottomCTABar({

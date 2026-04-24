@@ -48,13 +48,19 @@ export default function InventoryPage() {
 
   return (
     <MobileFrame>
-      <HeaderHero title="재고" subtitle="수술 예측 기반 권장재고와 실제 로트를 함께 관리" right={<StatusChip label={`${rows.length}품목`} tone="info" />} />
-      <div className="flex justify-end">
-        <button type="button" onClick={() => setShowScanner(true)} className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2 py-1 text-xs font-semibold text-white">
-          <Camera className="size-3.5" />
-          재고 QR
-        </button>
-      </div>
+      <HeaderHero
+        title="재고"
+        subtitle="수술 예측 기반 권장재고와 실제 로트를 함께 관리"
+        right={
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={() => setShowScanner(true)} className="inline-flex items-center gap-1 rounded-lg bg-white/20 px-2 py-1 text-xs font-semibold text-white">
+              <Camera className="size-3.5" />
+              QR검색
+            </button>
+            <StatusChip label={`${rows.length}품목`} tone="info" />
+          </div>
+        }
+      />
       <SectionCard title="검색/필터">
         <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="품목명, 카테고리" className="h-11 rounded-xl border-0 bg-[#f3f6ff]" />
         {scanResult && <p className="mt-2 text-xs text-blue-700">{scanResult}</p>}

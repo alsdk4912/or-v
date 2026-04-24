@@ -26,13 +26,19 @@ export default function ProcurementPage() {
 
   return (
     <MobileFrame>
-      <HeaderHero title="발주 / 가격비교" subtitle="권장발주 · 공급사비교 · 이력관리" right={<StatusChip label={`${recs.length}건`} tone="warn" />} />
-      <div className="flex justify-end">
-        <button type="button" onClick={() => setScannerOpen(true)} className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2 py-1 text-xs font-semibold text-white">
-          <Camera className="size-3.5" />
-          QR 검색
-        </button>
-      </div>
+      <HeaderHero
+        title="발주 / 가격비교"
+        subtitle="권장발주 · 공급사비교 · 이력관리"
+        right={
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={() => setScannerOpen(true)} className="inline-flex items-center gap-1 rounded-lg bg-white/20 px-2 py-1 text-xs font-semibold text-white">
+              <Camera className="size-3.5" />
+              QR검색
+            </button>
+            <StatusChip label={`${recs.length}건`} tone="warn" />
+          </div>
+        }
+      />
       {scanMessage && (
         <p className="rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-700">{scanMessage}</p>
       )}
