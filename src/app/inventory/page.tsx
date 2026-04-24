@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { AlertTriangle, Sparkles } from "lucide-react";
+import { AlertTriangle, Camera, Sparkles } from "lucide-react";
 
 import { AppTabBar, HeaderHero, MobileFrame, SectionCard, StatusChip } from "@/components/mobile/design-system";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { getAllRecommendations, getItemRisk } from "@/lib/inventory-engine";
 
 export default function InventoryPage() {
   const [query, setQuery] = useState("");
+  const [visionMode, setVisionMode] = useState<"대기" | "누락탐지" | "AR라벨">("대기");
   const recommendations = useMemo(() => getAllRecommendations(), []);
 
   const rows = useMemo(
@@ -75,6 +76,44 @@ export default function InventoryPage() {
               </div>
             </div>
           ))}
+        </div>
+      </SectionCard>
+      <SectionCard title="카메라 세트 점검 (AI/AR 데모)">
+        <div className="space-y-2 pb-24">
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setVisionMode("누락탐지")} className="rounded-xl bg-rose-600 px-2 py-2 text-xs font-semibold text-white">
+              <Camera className="mr-1 inline size-3.5" />
+              누락 탐지
+            </button>
+            <button type="button" onClick={() => setVisionMode("AR라벨")} className="rounded-xl bg-emerald-600 px-2 py-2 text-xs font-semibold text-white">
+              <Camera className="mr-1 inline size-3.5" />
+              AR 라벨
+            </button>
+          </div>
+          <div className="relative h-44 rounded-2xl border border-slate-200 bg-slate-100">
+            <div className="absolute left-4 top-5 rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">세트 트레이 뷰</div>
+            {visionMode === "누락탐지" && (
+              <>
+                <div className="absolute left-[58%] top-[52%] rounded-lg border-2 border-rose-500 bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700">
+                  retractor 1개 누락
+                </div>
+                <span className="absolute left-[60%] top-[38%] inline-flex size-8 animate-ping rounded-full bg-rose-400 opacity-75" />
+              </>
+            )}
+            {visionMode === "AR라벨" && (
+              <>
+                <div className="absolute left-[14%] top-[35%] rounded-md bg-emerald-600/90 px-2 py-1 text-[11px] font-semibold text-white">흡인기: 혈액/체액 제거</div>
+                <div className="absolute left-[40%] top-[58%] rounded-md bg-blue-600/90 px-2 py-1 text-[11px] font-semibold text-white">Retractor: 시야 확보</div>
+              </>
+            )}
+          </div>
+          <p className="text-xs text-slate-600">
+            {visionMode === "대기"
+              ? "카메라 분석 버튼을 선택하면 누락 탐지 또는 AR 라벨링 결과를 표시합니다."
+              : visionMode === "누락탐지"
+                ? "분석 결과: retractor 1개 누락. 교체 세트 호출 권장."
+                : "AR 결과: 기구 명칭과 용도를 화면 위 오버레이로 안내합니다."}
+          </p>
         </div>
       </SectionCard>
       <AppTabBar currentPath="/inventory" />
