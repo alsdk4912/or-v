@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { ArrowLeft } from "lucide-react";
+import type { ReactNode } from "react";
+import { ArrowLeft, BarChart3, Boxes, ShieldAlert } from "lucide-react";
 
 import { AppTabBar, HeaderHero, MobileFrame, SectionCard } from "@/components/mobile/design-system";
 import { completionLogMocks } from "@/data/admin-mock";
@@ -72,7 +73,15 @@ export default function AnalyticsPage() {
         <ArrowLeft className="size-3.5" /> 대시보드로 돌아가기
       </Link>
 
-      <SectionCard title="수술별 재료 사용량 그래프">
+      <SectionCard title="핵심 데이터 요약">
+        <div className="grid grid-cols-3 gap-2">
+          <MetricIconCard icon={<BarChart3 className="size-4 text-blue-700" />} label="수술 사용량" value={`${usageBySurgery.length}유형`} />
+          <MetricIconCard icon={<Boxes className="size-4 text-amber-700" />} label="재고 감소 추이" value={`${stockDropTrend.length}일`} />
+          <MetricIconCard icon={<ShieldAlert className="size-4 text-rose-700" />} label="누락률 추적" value={`${missRateTrend.length}월`} />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="수술별 재료 사용량">
         <div className="space-y-2">
           {usageBySurgery.map((row) => (
             <BarRow key={row.label} label={row.label} value={row.value} color="bg-blue-600" />
@@ -114,6 +123,24 @@ function BarRow({ label, value, color }: { label: string; value: number; color: 
       <div className="h-2.5 rounded-full bg-slate-200">
         <div className={`h-2.5 rounded-full ${color}`} style={{ width: `${value}%` }} />
       </div>
+    </div>
+  );
+}
+
+function MetricIconCard({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-center">
+      <div className="mb-1 flex justify-center">{icon}</div>
+      <p className="text-[10px] text-slate-600">{label}</p>
+      <p className="text-xs font-semibold text-slate-800">{value}</p>
     </div>
   );
 }
