@@ -1,36 +1,73 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { ArrowLeft } from "lucide-react";
 
 import { AppTabBar, HeaderHero, MobileFrame, SectionCard } from "@/components/mobile/design-system";
-
-const usageBySurgery = [
-  { label: "고관절 전치환술", value: 86 },
-  { label: "복강경 담낭절제술", value: 64 },
-  { label: "개두술", value: 58 },
-  { label: "제왕절개술", value: 43 },
-];
-
-const stockDropTrend = [
-  { label: "월", value: 22 },
-  { label: "화", value: 35 },
-  { label: "수", value: 41 },
-  { label: "목", value: 29 },
-  { label: "금", value: 47 },
-];
-
-const missRateTrend = [
-  { month: "1월", before: 18, after: 13 },
-  { month: "2월", before: 17, after: 10 },
-  { month: "3월", before: 19, after: 9 },
-  { month: "4월", before: 16, after: 7 },
-];
+import { completionLogMocks } from "@/data/admin-mock";
+import { inventoryLots, surgeryUsageHistory } from "@/data/inventory-mock";
+import { surgeryCases } from "@/data/mock-surgeries";
 
 export default function AnalyticsPage() {
+  const usageBySurgery = useMemo(() => {
+    const deptUsage = surgeryUsageHistory.reduce<Record<string, number>>((acc, row) => {
+      acc[row.department] = (acc[row.department] ?? 0) + row.used_qty;
+      return acc;
+    }, {});
+    const deptToSurgery = new Map<string, string>();
+    surgeryCases.forEach((row) => {
+      if (!deptToSurgery.has(row.department)) {
+        deptToSurgery.set(row.department, row.surgeryName);
+      }
+    });
+
+    return Object.entries(deptUsage)
+      .map(([department, qty]) => ({
+        label: deptToSurgery.get(department) ?? department,
+        value: Math.min(100, qty),
+      }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 4);
+  }, []);
+
+  const stockDropTrend = useMemo(() => {
+    const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
+    const bucket = new Map<string, number>();
+
+    surgeryUsageHistory.forEach((row) => {
+      const day = dayNames[new Date(row.used_at).getDay()];
+      bucket.set(day, (bucket.get(day) ?? 0) + row.used_qty);
+    });
+
+    return ["월", "화", "수", "목", "금"]
+      .map((day) => ({ label: day, value: Math.min(100, bucket.get(day) ?? 0) }))
+      .filter((row) => row.value > 0);
+  }, []);
+
+  const missRateTrend = useMemo(() => {
+    const monthly = new Map<string, { total: number; delayed: number }>();
+
+    completionLogMocks.forEach((log) => {
+      const month = `${new Date(log.completedAt).getMonth() + 1}월`;
+      const prev = monthly.get(month) ?? { total: 0, delayed: 0 };
+      prev.total += 1;
+      if (log.result === "지연 후 완료") prev.delayed += 1;
+      monthly.set(month, prev);
+    });
+
+    return Array.from(monthly.entries()).map(([month, v]) => {
+      const before = Math.min(100, Math.round((v.delayed / v.total) * 100 + 8));
+      const after = Math.max(0, Math.round((v.delayed / v.total) * 100));
+      return { month, before, after };
+    });
+  }, []);
+
+  const expiringLots = inventoryLots.filter((lot) => lot.status === "임박").length;
+
   return (
     <MobileFrame>
-      <HeaderHero title="데이터 개선 화면" subtitle="누락 방지 중심 지표를 시각화" />
+      <HeaderHero title="데이터 개선 화면" subtitle={`날짜 기반 사용/누락/재고 추이 (임박 로트 ${expiringLots}건)`} />
       <Link href="/" className="inline-flex items-center gap-1 text-xs text-slate-600">
         <ArrowLeft className="size-3.5" /> 대시보드로 돌아가기
       </Link>
