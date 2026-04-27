@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Boxes, ClipboardCheck, ShoppingCart } from "lucide-react";
 
 import { AppTabBar } from "@/components/mobile/design-system";
@@ -18,6 +18,7 @@ interface InventoryItem {
 const checklistSteps = [
   { id: "gate-signin", label: "Sign In 확인", itemId: "ITEM-001", consumeQty: 1 },
   { id: "gate-timeout", label: "Time Out 확인", itemId: "ITEM-002", consumeQty: 1 },
+  { id: "gauze-ready", label: "거즈 10개 준비 완료", itemId: "ITEM-004", consumeQty: 10 },
   { id: "gate-start", label: "수술 시작 게이팅 해제", itemId: "ITEM-003", consumeQty: 2 },
 ] as const;
 
@@ -25,12 +26,14 @@ const initialInventory: InventoryItem[] = [
   { id: "ITEM-001", name: "멸균 봉합사 2-0", stock: 6, reorderPoint: 5 },
   { id: "ITEM-002", name: "멸균 봉합사 3-0", stock: 4, reorderPoint: 4 },
   { id: "ITEM-003", name: "복강경 트로카", stock: 3, reorderPoint: 4 },
+  { id: "ITEM-004", name: "수술용 거즈", stock: 40, reorderPoint: 25 },
 ];
 
 export default function DashboardPage() {
   const [roleMode, setRoleMode] = useState<RoleMode>("NURSE_MODE");
   const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({});
+  const [adminSyncNotice, setAdminSyncNotice] = useState("");
 
   const shortageList = useMemo(
     () => inventory.filter((item) => item.stock <= item.reorderPoint),
@@ -47,7 +50,16 @@ export default function DashboardPage() {
         item.id === itemId ? { ...item, stock: Math.max(0, item.stock - consumeQty) } : item,
       ),
     );
+    setAdminSyncNotice("관리자 전용 알림: 소모품 재고 실시간 동기화 중...");
   };
+
+  useEffect(() => {
+    if (!adminSyncNotice) return;
+    const timer = setTimeout(() => {
+      setAdminSyncNotice("");
+    }, 2800);
+    return () => clearTimeout(timer);
+  }, [adminSyncNotice]);
 
   return (
     <div className="h-[100dvh] overflow-hidden bg-slate-950 text-slate-100">
@@ -85,6 +97,11 @@ export default function DashboardPage() {
           <AdminDashboard inventory={inventory} shortageList={shortageList} />
         )}
       </main>
+      {adminSyncNotice && (
+        <div className="fixed bottom-20 right-4 z-30 rounded-lg border border-cyan-400/30 bg-slate-900/95 px-3 py-2 text-[11px] text-cyan-200 shadow-[0_6px_16px_rgba(8,47,73,0.45)]">
+          {adminSyncNotice}
+        </div>
+      )}
       <AppTabBar currentPath="/" />
     </div>
   );
