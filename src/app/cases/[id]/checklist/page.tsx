@@ -149,7 +149,7 @@ export default function ChecklistExecutionPage() {
         </div>
       </section>
 
-      <Link href={`/cases/${caseId}`} className="inline-flex items-center gap-1 text-xs text-slate-600">
+      <Link href={`/cases/${caseId}/`} className="inline-flex items-center gap-1 text-xs text-slate-600">
         <ArrowLeft className="size-3.5" /> 케이스 상세로 돌아가기
       </Link>
 
