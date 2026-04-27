@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, BarChart3, Camera, ClipboardCheck, Info, ShoppingCart } from "lucide-react";
+import { BarChart3, Camera, Info, ShoppingCart } from "lucide-react";
 
 import { AppTabBar } from "@/components/mobile/design-system";
+import { MiddlewareSyncSimulator } from "@/components/inventory/middleware-sync-simulator";
 import { surgeryCases } from "@/data/mock-surgeries";
 
 type RoleMode = "NURSE_MODE" | "ADMIN_MODE";
-type SurgeryStage = "Pre" | "Intra" | "Post";
 
 interface InventoryItem {
   id: string;
@@ -24,26 +24,11 @@ const initialInventory: InventoryItem[] = [
   { id: "ITEM-003", name: "수술용 거즈", stock: 60, reorderPoint: 45 },
 ];
 
-const timelineItems = [
-  "07:40 고관절 전치환술 (OR-1)",
-  "09:10 요관결석 내시경 제거술 (OR-6)",
-  "12:20 개복 대장절제술 (OR-2)",
-];
-
-const stageOrder: SurgeryStage[] = ["Pre", "Intra", "Post"];
-const stageGuide: Record<SurgeryStage, string> = {
-  Pre: "환자 확인, Time-out, 멸균세트 확인",
-  Intra: "기구 전달, 사용품 스캔, 체크리스트 기록",
-  Post: "기구 카운트, 소모품 정산, 인계 완료",
-};
-
 export default function DashboardPage() {
   const [userId, setUserId] = useState("");
   const [roleMode, setRoleMode] = useState<RoleMode | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
-  const [stage, setStage] = useState<SurgeryStage>("Pre");
   const [cameraSyncMessage, setCameraSyncMessage] = useState("");
-  const [manualInput, setManualInput] = useState("");
   const [quickHelpOpen, setQuickHelpOpen] = useState(false);
   const [timeOutDoneRooms, setTimeOutDoneRooms] = useState(94);
 
@@ -57,16 +42,24 @@ export default function DashboardPage() {
     () => surgeryCases.find((item) => item.surgeryStatus === "진행중" || item.surgeryStatus === "준비중") ?? surgeryCases[0],
     [],
   );
+  const timelineCases = useMemo(
+    () => surgeryCases.filter((item) => item.surgeryStatus === "준비중" || item.surgeryStatus === "지연위험").slice(0, 4),
+    [],
+  );
+  const [selectedTimelineCaseId, setSelectedTimelineCaseId] = useState(timelineCases[0]?.id ?? currentSurgery.id);
+  const selectedTimelineCase = useMemo(
+    () => timelineCases.find((item) => item.id === selectedTimelineCaseId) ?? timelineCases[0] ?? currentSurgery,
+    [currentSurgery, selectedTimelineCaseId, timelineCases],
+  );
+  const nextActionHint = useMemo(() => {
+    if (selectedTimelineCase.checklist.blockedByStage === "Sign In 미완료") return "다음 진행: 환자/수술부위 확인 후 Sign In 완료";
+    if (selectedTimelineCase.checklist.blockedByStage === "Time Out 미완료") return "다음 진행: 팀 브리핑 후 Time Out 완료";
+    return "다음 진행: 사용 소모품 스캔 및 Sign Out 기록";
+  }, [selectedTimelineCase.checklist.blockedByStage]);
 
   const login = () => {
     if (userId === "nurse") setRoleMode("NURSE_MODE");
     if (userId === "admin") setRoleMode("ADMIN_MODE");
-  };
-
-  const moveStage = (next: SurgeryStage) => {
-    const currentIdx = stageOrder.indexOf(stage);
-    const nextIdx = stageOrder.indexOf(next);
-    if (nextIdx <= currentIdx + 1) setStage(next);
   };
 
   const applyConsumption = (itemId: string, qty: number, source: "QR" | "MANUAL") => {
@@ -88,12 +81,6 @@ export default function DashboardPage() {
     } catch {
       setCameraSyncMessage("카메라 권한 필요: 수기 입력 모드를 사용하세요.");
     }
-  };
-
-  const submitManualInput = () => {
-    if (!manualInput.trim()) return;
-    applyConsumption("ITEM-003", 10, "MANUAL");
-    setManualInput("");
   };
 
   return (
@@ -135,75 +122,49 @@ export default function DashboardPage() {
 
             <header className="rounded-2xl border border-blue-100 bg-white p-4 shadow-[0_6px_18px_rgba(0,82,204,0.08)]">
               <p className="text-xs font-semibold text-slate-500">일반간호사 모드</p>
-              <h1 className="mt-1 text-lg font-bold text-[#0052CC]">오늘 담당 수술 타임라인</h1>
+              <h1 className="mt-1 text-lg font-bold text-[#0052CC]">진행중 수술 타임라인</h1>
               <div className="mt-2 space-y-1 text-xs text-slate-700">
-                {timelineItems.map((item) => (
-                  <p key={item} className="rounded-lg bg-blue-50 px-2 py-2">{item}</p>
+                {timelineCases.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSelectedTimelineCaseId(item.id)}
+                    className={`w-full rounded-lg px-2 py-2 text-left ${
+                      selectedTimelineCase.id === item.id ? "bg-blue-600 text-white" : "bg-blue-50 text-slate-700"
+                    }`}
+                  >
+                    {item.scheduledTime} {item.surgeryName} ({item.operatingRoom})
+                  </button>
                 ))}
               </div>
             </header>
 
             <section className="rounded-2xl border border-blue-100 bg-white p-4">
-              <p className="mb-2 text-xs font-semibold text-slate-500">Flow UI (Gating)</p>
-              <div className="grid grid-cols-3 gap-2">
-                {stageOrder.map((s) => {
-                  const active = s === stage;
-                  const currentIdx = stageOrder.indexOf(stage);
-                  const idx = stageOrder.indexOf(s);
-                  const locked = idx > currentIdx + 1;
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      disabled={locked}
-                      onClick={() => moveStage(s)}
-                      className={`h-14 rounded-xl text-sm font-semibold ${
-                        active
-                          ? "bg-[#0052CC] text-white"
-                          : locked
-                            ? "bg-slate-100 text-slate-400"
-                            : "bg-blue-50 text-[#0052CC]"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="mt-2 text-xs text-slate-600">{stageGuide[stage]}</p>
-            </section>
-
-            <section className="rounded-2xl border border-blue-100 bg-white p-4">
-              <p className="mb-2 text-xs font-semibold text-slate-500">Camera Recording (QR/바코드)</p>
-              <button
-                type="button"
-                onClick={() => void simulateCameraScan()}
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0052CC] text-sm font-semibold text-white"
-              >
-                <Camera className="size-4" />
-                카메라 스캔 시작
-              </button>
-              <div className="mt-2 flex gap-2">
-                <input
-                  value={manualInput}
-                  onChange={(event) => setManualInput(event.target.value)}
-                  placeholder="수기 입력 (예: 거즈 10)"
-                  className="h-12 flex-1 rounded-xl border border-blue-100 px-3 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={submitManualInput}
-                  className="h-12 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white"
-                >
-                  전송
-                </button>
-              </div>
-              {cameraSyncMessage && (
-                <p className="mt-2 rounded-lg bg-emerald-50 px-2 py-2 text-xs font-semibold text-emerald-700">
-                  {cameraSyncMessage}
+              <p className="mb-2 text-xs font-semibold text-slate-500">체크리스트 진행 현황</p>
+              <div className="rounded-xl border border-blue-100 bg-blue-50 p-3">
+                <p className="text-sm font-semibold text-slate-900">{selectedTimelineCase.surgeryName}</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  진행률 {selectedTimelineCase.checklist.completedCount}/{selectedTimelineCase.checklist.totalCount}
                 </p>
-              )}
+                <div className="mt-2 h-2 rounded-full bg-blue-100">
+                  <div
+                    className="h-2 rounded-full bg-[#0052CC]"
+                    style={{
+                      width: `${Math.round(
+                        (selectedTimelineCase.checklist.completedCount / selectedTimelineCase.checklist.totalCount) * 100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+                <p className="mt-2 text-xs font-semibold text-blue-700">{nextActionHint}</p>
+                <p className="mt-1 text-xs text-slate-600">현재 잠금 단계: {selectedTimelineCase.checklist.blockedByStage}</p>
+              </div>
             </section>
+            {cameraSyncMessage && (
+              <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-xs font-semibold text-emerald-700">{cameraSyncMessage}</p>
+              </section>
+            )}
 
             <button
               type="button"
@@ -211,13 +172,6 @@ export default function DashboardPage() {
               className="fixed bottom-24 right-4 inline-flex size-12 items-center justify-center rounded-full bg-[#0052CC] text-white shadow-[0_8px_18px_rgba(0,82,204,0.3)]"
             >
               <Info className="size-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => void simulateCameraScan()}
-              className="fixed bottom-24 left-4 inline-flex size-12 items-center justify-center rounded-full bg-[#0052CC] text-white shadow-[0_8px_18px_rgba(0,82,204,0.3)]"
-            >
-              <Camera className="size-5" />
             </button>
             {quickHelpOpen && (
               <section className="fixed inset-0 z-30 flex items-end bg-black/30">
@@ -263,6 +217,7 @@ export default function DashboardPage() {
               <p className="text-xs font-semibold text-amber-700">Predictive Inventory</p>
               <p className="mt-1 text-sm font-bold text-amber-900">현재 수술 속도 기반, 2시간 뒤 거즈 부족 예정</p>
             </section>
+            <MiddlewareSyncSimulator />
 
             <section className="rounded-2xl border border-blue-100 bg-white p-4">
               <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-slate-500">

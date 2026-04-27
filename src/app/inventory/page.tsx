@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import { AlertTriangle, Camera, Search, Sparkles, X } from "lucide-react";
 
 import { AppTabBar, HeaderHero, MobileFrame, SectionCard, StatusChip } from "@/components/mobile/design-system";
-import { MiddlewareSyncSimulator } from "@/components/inventory/middleware-sync-simulator";
 import { Input } from "@/components/ui/input";
 import { inventoryLots, itemMasters } from "@/data/inventory-mock";
 import { getAllRecommendations, getItemRisk } from "@/lib/inventory-engine";
@@ -88,7 +87,6 @@ export default function InventoryPage() {
         </div>
         {scanResult && <p className="mt-2 text-xs text-blue-700">{scanResult}</p>}
       </SectionCard>
-      <MiddlewareSyncSimulator />
 
       <SectionCard title="AI 재고 보충 추천" subtitle="현재 수술 패턴 기반 핵심 5개">
         <div className="mb-2 rounded-xl border border-emerald-200 bg-emerald-50 p-2">
