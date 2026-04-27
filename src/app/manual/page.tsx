@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, MapPin, PlayCircle, X } from "lucide-react";
+import { ArrowLeft, Info, MapPin, PlayCircle, X } from "lucide-react";
 
 import { AppCard, BlueHero, MobileAppShell } from "@/components/mobile/app-shell";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -11,11 +11,14 @@ import { getSurgeryCaseDetailById, surgeryCases } from "@/data/mock-surgeries";
 
 export default function ManualPage() {
   const [caseId, setCaseId] = useState(surgeryCases[0]?.id ?? "");
+  const [topTab, setTopTab] = useState<"매뉴얼" | "교수선호">("매뉴얼");
   const [detailTab, setDetailTab] = useState<"매뉴얼" | "카메라세트점검">("매뉴얼");
   const [activeEquipment, setActiveEquipment] = useState<string | null>(null);
   const [mapTarget, setMapTarget] = useState<{ equipment: string; location: string } | null>(null);
   const [visionMode, setVisionMode] = useState<"대기" | "누락탐지" | "AR라벨">("대기");
   const [showProcedurePopup, setShowProcedurePopup] = useState(false);
+  const [newNurseMode, setNewNurseMode] = useState(false);
+  const [handlingTarget, setHandlingTarget] = useState<string | null>(null);
   const detail = getSurgeryCaseDetailById(caseId);
   const surgery = surgeryCases.find((item) => item.id === caseId);
 
@@ -25,17 +28,21 @@ export default function ManualPage() {
 
   return (
     <MobileAppShell>
-      <BlueHero title="매뉴얼 / 학습" subtitle="현장에서 필요한 핵심만 단계적으로 확인하세요." />
+      <BlueHero title="매뉴얼 / 학습" subtitle="체크리스트 게이팅과 교육 특화 모드" />
       <Link href="/" className="inline-flex items-center gap-1 text-xs text-slate-600">
         <ArrowLeft className="size-3.5" /> 대시보드로 돌아가기
       </Link>
       <section className="grid grid-cols-2 gap-2 rounded-2xl bg-white p-2">
-        <Link href="/manual" className="rounded-xl bg-blue-600 px-2 py-2 text-center text-xs font-semibold text-white">
-          매뉴얼
-        </Link>
-        <Link href="/preferences" className="rounded-xl bg-slate-100 px-2 py-2 text-center text-xs font-semibold text-slate-700">
-          교수 선호
-        </Link>
+        {(["매뉴얼", "교수선호"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setTopTab(tab)}
+            className={`rounded-xl px-2 py-2 text-center text-xs font-semibold ${topTab === tab ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"}`}
+          >
+            {tab}
+          </button>
+        ))}
       </section>
 
       <AppCard title="수술 선택">
@@ -53,6 +60,7 @@ export default function ManualPage() {
         </Select>
       </AppCard>
 
+      {topTab === "매뉴얼" && (
       <section className="grid grid-cols-2 gap-2 rounded-2xl bg-white p-2">
         {(["매뉴얼", "카메라세트점검"] as const).map((tab) => (
           <button
@@ -65,9 +73,20 @@ export default function ManualPage() {
           </button>
         ))}
       </section>
+      )}
 
-      {detailTab === "매뉴얼" && (
+      {topTab === "매뉴얼" && detailTab === "매뉴얼" && (
         <AppCard title={surgery.surgeryName} subtitle="신규/숙련 모두를 위한 핵심 가이드">
+          <div className="mb-2 flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50 px-2 py-2">
+            <p className="text-xs font-semibold text-blue-800">신규 간호사 모드</p>
+            <button
+              type="button"
+              onClick={() => setNewNurseMode((prev) => !prev)}
+              className={`rounded-full px-2 py-1 text-[11px] font-semibold ${newNurseMode ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-700"}`}
+            >
+              {newNurseMode ? "ON" : "OFF"}
+            </button>
+          </div>
           <Accordion defaultValue={["ready", "procedure"]}>
           <AccordionItem value="ready">
             <AccordionTrigger>핵심 준비사항 / 특이 수술과정 요약</AccordionTrigger>
@@ -79,6 +98,23 @@ export default function ManualPage() {
             <AccordionTrigger>필요 재료</AccordionTrigger>
             <AccordionContent>
               <p>{detail.requiredMaterials.join(", ")}</p>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="training-check">
+            <AccordionTrigger>교육 체크리스트</AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-2">
+                {["멸균장갑 착용 후 기구 전달", "흡인기 핸들링 자세", "카메라 라인 꼬임 방지"].map((item) => (
+                  <div key={item} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm">
+                    <p>{item}</p>
+                    {newNurseMode && (
+                      <button type="button" onClick={() => setHandlingTarget(item)} className="rounded-full bg-blue-100 p-1 text-blue-700">
+                        <Info className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="eq">
@@ -137,7 +173,7 @@ export default function ManualPage() {
         </AppCard>
       )}
 
-      {detailTab === "카메라세트점검" && (
+      {topTab === "매뉴얼" && detailTab === "카메라세트점검" && (
         <AppCard title="카메라 세트 점검 (AI/AR 데모)">
           <div className="space-y-2">
             <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-800">
@@ -168,6 +204,28 @@ export default function ManualPage() {
                 </>
               )}
             </div>
+          </div>
+        </AppCard>
+      )}
+
+      {topTab === "교수선호" && (
+        <AppCard title={`${surgery.surgeon} 수술대 배치 오버레이`} subtitle="교수 선호 배치를 시각적으로 확인">
+          <div className="space-y-2">
+            <div className="relative h-52 rounded-2xl border border-slate-200 bg-slate-100">
+              <div className="absolute left-1/2 top-1/2 h-24 w-36 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-slate-300 bg-white text-center text-xs font-semibold text-slate-700 leading-[96px]">
+                수술대
+              </div>
+              <div className="absolute left-[14%] top-[22%] rounded-md bg-blue-600/90 px-2 py-1 text-[11px] font-semibold text-white">
+                메인 기구 트레이
+              </div>
+              <div className="absolute right-[12%] top-[36%] rounded-md bg-emerald-600/90 px-2 py-1 text-[11px] font-semibold text-white">
+                흡인/전기소작
+              </div>
+              <div className="absolute left-[22%] bottom-[16%] rounded-md bg-amber-600/90 px-2 py-1 text-[11px] font-semibold text-white">
+                임플란트/소모품
+              </div>
+            </div>
+            <p className="text-xs text-slate-600">표준 배치 대비 교수 선호 위치를 오버레이로 표시합니다.</p>
           </div>
         </AppCard>
       )}
@@ -230,6 +288,22 @@ export default function ManualPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+      )}
+
+      {handlingTarget && (
+        <section className="fixed inset-0 z-40 flex items-end bg-slate-900/45">
+          <div className="w-full rounded-t-3xl bg-white p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-sm font-semibold">{handlingTarget} 핸들링 숏폼</h3>
+              <button type="button" onClick={() => setHandlingTarget(null)} className="rounded-lg bg-slate-100 p-1.5 text-slate-700">
+                <X className="size-4" />
+              </button>
+            </div>
+            <video controls className="h-44 w-full rounded-xl bg-slate-900" poster="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&auto=format&fit=crop&q=60">
+              <source src="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4" type="video/mp4" />
+            </video>
           </div>
         </section>
       )}
