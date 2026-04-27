@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { AlertTriangle, Boxes, ClipboardCheck, ShoppingCart } from "lucide-react";
 
 import { AppTabBar } from "@/components/mobile/design-system";
+import { RealtimeGatingProof } from "@/components/gating/realtime-gating-proof";
 
 type RoleMode = "NURSE_MODE" | "ADMIN_MODE";
 
@@ -98,6 +99,8 @@ function NurseDashboard({
 }) {
   return (
     <>
+      <RealtimeGatingProof />
+
       <section className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-3">
         <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-blue-200">
           <ClipboardCheck className="size-3.5" />
