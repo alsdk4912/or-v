@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Camera, HelpCircle, Lock, TriangleAlert, User } from "lucide-react";
+import { BarChart3, Camera, Info, ShoppingCart } from "lucide-react";
 
 import { AppTabBar } from "@/components/mobile/design-system";
+import { MiddlewareSyncSimulator } from "@/components/inventory/middleware-sync-simulator";
 import { surgeryCases } from "@/data/mock-surgeries";
 
 type RoleMode = "NURSE_MODE" | "ADMIN_MODE";
@@ -16,6 +17,8 @@ interface InventoryItem {
   reorderPoint: number;
 }
 
+const TRUST_BLUE = "#0052CC";
+
 const initialInventory: InventoryItem[] = [
   { id: "ITEM-001", name: "멸균 봉합사 2-0", stock: 40, reorderPoint: 30 },
   { id: "ITEM-002", name: "복강경 트로카", stock: 16, reorderPoint: 12 },
@@ -24,7 +27,6 @@ const initialInventory: InventoryItem[] = [
 
 export default function DashboardPage() {
   const [userId, setUserId] = useState("");
-  const [password, setPassword] = useState("");
   const [roleMode, setRoleMode] = useState<RoleMode | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
   const [cameraSyncMessage, setCameraSyncMessage] = useState("");
@@ -45,21 +47,14 @@ export default function DashboardPage() {
     () => surgeryCases.filter((item) => item.surgeryStatus === "준비중" || item.surgeryStatus === "지연위험").slice(0, 4),
     [],
   );
-  const [selectedTimelineCaseId, setSelectedTimelineCaseId] = useState(
-    timelineCases[0]?.id ?? currentSurgery.id,
-  );
+  const [selectedTimelineCaseId, setSelectedTimelineCaseId] = useState(timelineCases[0]?.id ?? currentSurgery.id);
   const selectedTimelineCase = useMemo(
     () => timelineCases.find((item) => item.id === selectedTimelineCaseId) ?? timelineCases[0] ?? currentSurgery,
     [currentSurgery, selectedTimelineCaseId, timelineCases],
   );
-
   const nextActionHint = useMemo(() => {
-    if (selectedTimelineCase.checklist.blockedByStage === "Sign In 미완료") {
-      return "다음 진행: 환자/수술부위 확인 후 Sign In 완료";
-    }
-    if (selectedTimelineCase.checklist.blockedByStage === "Time Out 미완료") {
-      return "다음 진행: 팀 브리핑 후 Time Out 완료";
-    }
+    if (selectedTimelineCase.checklist.blockedByStage === "Sign In 미완료") return "다음 진행: 환자/수술부위 확인 후 Sign In 완료";
+    if (selectedTimelineCase.checklist.blockedByStage === "Time Out 미완료") return "다음 진행: 팀 브리핑 후 Time Out 완료";
     return "다음 진행: 사용 소모품 스캔 및 Sign Out 기록";
   }, [selectedTimelineCase.checklist.blockedByStage]);
 
@@ -68,93 +63,71 @@ export default function DashboardPage() {
     if (userId === "admin") setRoleMode("ADMIN_MODE");
   };
 
-  const applyConsumption = (itemId: string, qty: number) => {
+  const applyConsumption = (itemId: string, qty: number, source: "QR" | "MANUAL") => {
+    // 사람이 안전하게 일하면 데이터가 자동으로 생성된다:
+    // 간호사의 스캔/기록이 즉시 재고 데이터로 변환되고 관리자 대시보드에 반영된다.
     setInventory((prev) =>
       prev.map((item) =>
         item.id === itemId ? { ...item, stock: Math.max(0, item.stock - qty) } : item,
       ),
     );
-    setCameraSyncMessage(`OR-V 동기화 완료 · ${itemId} -${qty}`);
+    setCameraSyncMessage(`ERP 재고 연동 성공 · ${source} 인식 · ${itemId} -${qty}`);
     setTimeOutDoneRooms((prev) => Math.min(98, prev + 1));
   };
 
   const simulateCameraScan = async () => {
     try {
       await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      applyConsumption("ITEM-003", 10);
+      applyConsumption("ITEM-003", 10, "QR");
     } catch {
-      setCameraSyncMessage("카메라 권한 필요: 관리자에게 권한을 요청하세요.");
+      setCameraSyncMessage("카메라 권한 필요: 수기 입력 모드를 사용하세요.");
     }
   };
 
   return (
-    <div className="min-h-screen bg-white text-[#101C3A]">
-      <main className="mx-auto w-full max-w-[430px] space-y-4 px-4 py-4">
+    <div className="min-h-screen bg-[#FFFFFF] text-slate-900">
+      <main className="mx-auto w-full max-w-[430px] space-y-3 px-4 py-4">
         {!roleMode ? (
-          <section className="rounded-[28px] border border-blue-100 bg-white p-5 shadow-[0_10px_24px_rgba(0,82,204,0.10)]">
-            <div className="text-center">
-              <h1 className="text-5xl font-extrabold tracking-tight text-[#101C3A]">
-                OR-<span className="bg-gradient-to-b from-[#0052CC] to-[#2DA8FF] bg-clip-text text-transparent">V</span>
-              </h1>
-              <p className="-mt-1 text-2xl font-black text-[#2DA8FF]">✓</p>
-              <p className="mt-1 text-sm font-medium text-slate-600">Surgical Safety, Redefined.</p>
-            </div>
-            <div className="mt-5 space-y-2">
-              <label className="flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3">
-                <User className="size-4 text-slate-400" />
-                <input
-                  value={userId}
-                  onChange={(event) => setUserId(event.target.value)}
-                  placeholder="Nurse ID"
-                  className="w-full bg-transparent text-sm outline-none"
-                />
-              </label>
-              <label className="flex h-12 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3">
-                <Lock className="size-4 text-slate-400" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="Password"
-                  className="w-full bg-transparent text-sm outline-none"
-                />
-              </label>
-            </div>
+          <section className="rounded-2xl border border-blue-100 bg-white p-4 shadow-[0_6px_18px_rgba(0,82,204,0.08)]">
+            <p className="text-sm font-semibold text-[#0052CC]">OR-V 로그인</p>
+            <p className="mt-1 text-xs text-slate-500">사용자 권한에 따라 필요한 정보만 노출하여 인지 부하를 줄입니다.</p>
+            <p className="mt-2 rounded-lg bg-blue-50 px-2 py-2 text-xs font-semibold text-blue-700">
+              수술실의 새로운 시야, OR-V가 안전을 체크합니다
+            </p>
+            <input
+              value={userId}
+              onChange={(event) => setUserId(event.target.value)}
+              placeholder="ID 입력 (nurse / admin)"
+              className="mt-3 h-12 w-full rounded-xl border border-blue-100 px-3 text-sm"
+            />
             <button
               type="button"
               onClick={login}
-              className="mt-4 h-12 w-full rounded-full bg-[#0052CC] text-sm font-bold text-white shadow-[0_8px_18px_rgba(0,82,204,0.28)]"
+              className="mt-2 h-12 w-full rounded-xl bg-[#0052CC] text-sm font-semibold text-white"
             >
-              LOG IN
+              로그인
             </button>
-            <p className="mt-3 text-center text-xs text-slate-500">Login with: Fingerprint/Face ID</p>
-            <p className="mt-2 rounded-xl bg-blue-50 px-3 py-2 text-center text-xs font-semibold text-blue-700">
-              수술실의 새로운 시야, OR-V가 안전을 체크합니다
-            </p>
           </section>
         ) : roleMode === "NURSE_MODE" ? (
           <>
-            <header className="rounded-[24px] border border-blue-100 bg-white p-5 shadow-[0_8px_20px_rgba(0,82,204,0.10)]">
-              <p className="text-xs font-semibold text-slate-500">Current Surgery</p>
-              <h1 className="mt-1 text-2xl font-extrabold text-[#101C3A]">Thyroidectomy</h1>
-              <p className="text-xs text-slate-600">
-                Thyroidectomy · {currentSurgery.surgeon} · {currentSurgery.operatingRoom}
-              </p>
-              <div className="mt-3 h-2 rounded-full bg-blue-100">
-                <div className="h-2 rounded-full bg-[#0052CC]" style={{ width: "58%" }} />
-              </div>
-              <p className="mt-1 text-[11px] text-slate-500">Progress</p>
-            </header>
-            <section className="rounded-[24px] border border-blue-100 bg-white p-4">
+            <header className="rounded-2xl border border-blue-100 bg-white p-4 shadow-[0_6px_18px_rgba(0,82,204,0.08)]">
+              <p className="text-xs font-semibold text-slate-500">현재 진행 수술</p>
+              <h1 className="mt-1 text-xl font-bold text-[#0052CC]">갑상선 절제술</h1>
+              <p className="mt-1 text-sm font-semibold text-slate-700">{currentSurgery.surgeon} · {currentSurgery.operatingRoom}</p>
               <button
                 type="button"
                 onClick={() => void simulateCameraScan()}
-                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#0052CC] text-sm font-semibold text-white"
+                className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0052CC] text-sm font-semibold text-white"
               >
                 <Camera className="size-4" />
-                물품 추가
+                물품 추가 (바코드/QR/수기)
               </button>
-              <div className="mt-3 space-y-1 text-xs text-slate-700">
+            </header>
+
+            <header className="rounded-2xl border border-blue-100 bg-white p-4 shadow-[0_6px_18px_rgba(0,82,204,0.08)]">
+              <p className="text-xs font-semibold text-slate-500">일반간호사 모드</p>
+              <h1 className="mt-1 text-lg font-bold text-[#0052CC]">진행중 수술 타임라인</h1>
+              <div className="mt-2 space-y-1 text-xs text-slate-700">
                 {timelineCases.map((item) => (
                   <button
                     key={item.id}
@@ -164,34 +137,63 @@ export default function DashboardPage() {
                       selectedTimelineCase.id === item.id ? "bg-blue-600 text-white" : "bg-blue-50 text-slate-700"
                     }`}
                   >
-                    {item.scheduledTime} {item.surgeryName}
+                    {item.scheduledTime} {item.surgeryName} ({item.operatingRoom})
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-[11px] font-semibold text-blue-700">{nextActionHint}</p>
+            </header>
+
+            <section className="rounded-2xl border border-blue-100 bg-white p-4">
+              <p className="mb-2 text-xs font-semibold text-slate-500">체크리스트 진행 현황</p>
+              <div className="rounded-xl border border-blue-100 bg-blue-50 p-3">
+                <p className="text-sm font-semibold text-slate-900">{selectedTimelineCase.surgeryName}</p>
+                <p className="mt-1 text-xs text-slate-600">
+                  진행률 {selectedTimelineCase.checklist.completedCount}/{selectedTimelineCase.checklist.totalCount}
+                </p>
+                <div className="mt-2 h-2 rounded-full bg-blue-100">
+                  <div
+                    className="h-2 rounded-full bg-[#0052CC]"
+                    style={{
+                      width: `${Math.round(
+                        (selectedTimelineCase.checklist.completedCount / selectedTimelineCase.checklist.totalCount) * 100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+                <p className="mt-2 text-xs font-semibold text-blue-700">{nextActionHint}</p>
+                <p className="mt-1 text-xs text-slate-600">현재 잠금 단계: {selectedTimelineCase.checklist.blockedByStage}</p>
+              </div>
             </section>
             {cameraSyncMessage && (
               <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <p className="text-xs font-semibold text-emerald-700">{cameraSyncMessage}</p>
               </section>
             )}
+            <section className="sticky bottom-16 z-20 rounded-2xl border border-blue-200 bg-white p-3 shadow-[0_6px_16px_rgba(0,82,204,0.12)]">
+              <p className="text-[11px] font-semibold text-blue-700">실시간 물품 추가</p>
+              <button
+                type="button"
+                onClick={() => void simulateCameraScan()}
+                className="mt-1 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0052CC] text-sm font-semibold text-white"
+              >
+                <Camera className="size-4" />
+                하단 빠른 추가 (QR/바코드)
+              </button>
+            </section>
+
             <button
               type="button"
               onClick={() => setQuickHelpOpen(true)}
-              className="fixed bottom-24 right-4 inline-flex size-16 items-center justify-center rounded-full bg-[#0052CC] text-white shadow-[0_8px_20px_rgba(0,82,204,0.35)]"
+              className="fixed bottom-24 right-4 inline-flex size-12 items-center justify-center rounded-full bg-[#0052CC] text-white shadow-[0_8px_18px_rgba(0,82,204,0.3)]"
             >
-              <HelpCircle className="size-8" />
+              <Info className="size-5" />
             </button>
             {quickHelpOpen && (
               <section className="fixed inset-0 z-30 flex items-end bg-black/30">
                 <div className="w-full rounded-t-3xl bg-white p-4">
                   <p className="text-sm font-semibold text-[#0052CC]">Quick Help</p>
-                  <p className="mt-2 rounded-lg bg-blue-50 px-2 py-2 text-xs">
-                    기구 도감: Retractor / C-arm / 흡인기 기본 핸들링
-                  </p>
-                  <p className="mt-2 rounded-lg bg-blue-50 px-2 py-2 text-xs">
-                    교수님 특이 요청: 절개 직전 30초 브리핑 필수
-                  </p>
+                  <p className="mt-2 rounded-lg bg-blue-50 px-2 py-2 text-xs">기구 도감: Retractor / C-arm / 흡인기 기본 핸들링</p>
+                  <p className="mt-2 rounded-lg bg-blue-50 px-2 py-2 text-xs">교수님 특이 요청: 절개 직전 30초 브리핑 필수</p>
                   <button
                     type="button"
                     onClick={() => setQuickHelpOpen(false)}
@@ -205,45 +207,83 @@ export default function DashboardPage() {
           </>
         ) : (
           <>
-            <header className="rounded-[24px] border border-blue-100 bg-white p-5 shadow-[0_8px_20px_rgba(0,82,204,0.10)]">
-              <p className="text-xs font-semibold text-slate-500">Admin Dashboard</p>
+            <header className="rounded-2xl border border-blue-100 bg-white p-4 shadow-[0_6px_18px_rgba(0,82,204,0.08)]">
+              <p className="text-xs font-semibold text-slate-500">관리자 모드</p>
               <h1 className="mt-1 text-lg font-bold text-[#0052CC]">오르비 지수 (Compliance Index)</h1>
-              <p className="text-xs text-slate-600">Time-Out: {timeoutRate}%</p>
-              <div className="mt-3 flex items-end gap-2">
-                {[62, 71, 58, 79, 66, 84, 73, 90].map((bar, idx) => (
-                  <div key={`${bar}-${idx}`} className="flex flex-col items-center gap-1">
-                    <div className="w-4 rounded-sm bg-[#0052CC]" style={{ height: `${bar / 2}px` }} />
-                    <span className="text-[10px] text-slate-400">
-                      {["Jan", "Feb", "Mar", "Wed", "Thu", "Fri", "Sat", "Sun"][idx]}
-                    </span>
+              <div className="mt-3 flex items-center gap-3">
+                <div
+                  className="relative size-24 rounded-full"
+                  style={{
+                    background: `conic-gradient(${TRUST_BLUE} ${Math.min(timeoutRate, 100) * 3.6}deg, #E5E7EB 0deg)`,
+                  }}
+                >
+                  <div className="absolute inset-2 flex items-center justify-center rounded-full bg-white text-sm font-bold text-[#0052CC]">
+                    {timeoutRate}%
                   </div>
-                ))}
+                </div>
+                <div>
+                  <p className="text-xs text-slate-600">Time-out 이행률</p>
+                  <p className="text-sm font-bold text-slate-900">목표 98%</p>
+                </div>
               </div>
             </header>
-            <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-              <p className="inline-flex items-center gap-1 text-xs font-semibold text-rose-700">
-                <TriangleAlert className="size-3.5" />
-                AI Inventory Alert
-              </p>
-              <p className="mt-1 text-sm font-bold text-rose-900">2 hrs until Gauze Shortage</p>
-              <p className="mt-1 text-xs text-rose-800">발주 필요 대상 {shortageList.length}건</p>
+
+            <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-xs font-semibold text-amber-700">Predictive Inventory</p>
+              <p className="mt-1 text-sm font-bold text-amber-900">현재 수술 속도 기반, 2시간 뒤 거즈 부족 예정</p>
             </section>
+            <MiddlewareSyncSimulator />
+
             <section className="rounded-2xl border border-blue-100 bg-white p-4">
-              <p className="mb-2 text-xs font-semibold text-slate-500">Room Status</p>
+              <p className="mb-2 flex items-center gap-1 text-xs font-semibold text-slate-500">
+                <BarChart3 className="size-3.5 text-[#0052CC]" />
+                재고 현황 그래프
+              </p>
+              <div className="space-y-2">
+                {inventory.map((item) => {
+                  const width = Math.max(8, Math.min(100, Math.round((item.stock / 60) * 100)));
+                  return (
+                    <div key={item.id} className="rounded-lg bg-blue-50 px-2 py-2">
+                      <div className="mb-1 flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-700">{item.name}</span>
+                        <span className="text-slate-500">{item.stock}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-blue-100">
+                        <div className="h-2 rounded-full bg-[#0052CC]" style={{ width: `${width}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+              <button
+                type="button"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-semibold text-white"
+              >
+                <ShoppingCart className="size-4" />
+                AI 자동 발주 버튼
+              </button>
+              <p className="mt-2 text-center text-xs text-emerald-700">발주 필요 대상 {shortageList.length}건</p>
+            </section>
+
+            <section className="rounded-2xl border border-blue-100 bg-white p-4">
+              <p className="mb-2 text-xs font-semibold text-slate-500">Live Status (전 수술실 모니터링)</p>
               <div className="overflow-hidden rounded-xl border border-slate-200">
                 <table className="w-full text-xs">
                   <thead className="bg-blue-50 text-slate-600">
                     <tr>
-                      <th className="px-2 py-2 text-left">Room</th>
-                      <th className="px-2 py-2 text-left">Status</th>
-                      <th className="px-2 py-2 text-right">Age</th>
+                      <th className="px-2 py-2 text-left">수술실</th>
+                      <th className="px-2 py-2 text-left">진행</th>
+                      <th className="px-2 py-2 text-right">체크리스트</th>
                     </tr>
                   </thead>
                   <tbody>
                     {[
-                      { room: "OR 4", stage: "Room", completion: "1h" },
-                      { room: "OR 2", stage: "Room", completion: "2h" },
-                      { room: "OR 1", stage: "Room", completion: "38m" },
+                      { room: "OR-1", stage: "Intra", completion: "8/10" },
+                      { room: "OR-2", stage: "Pre", completion: "5/10" },
+                      { room: "OR-3", stage: "Post", completion: "10/10" },
                     ].map((row) => (
                       <tr key={row.room} className="border-t border-slate-100">
                         <td className="px-2 py-2">{row.room}</td>
@@ -271,7 +311,6 @@ export default function DashboardPage() {
             onClick={() => {
               setRoleMode(null);
               setUserId("");
-              setPassword("");
             }}
             className="rounded-lg bg-[#0052CC] px-3 py-2 text-xs font-semibold text-white"
           >
@@ -283,3 +322,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
