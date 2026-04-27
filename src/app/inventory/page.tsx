@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { AlertTriangle, Camera, Sparkles, X } from "lucide-react";
 
 import { AppTabBar, HeaderHero, MobileFrame, SectionCard, StatusChip } from "@/components/mobile/design-system";
+import { MiddlewareSyncSimulator } from "@/components/inventory/middleware-sync-simulator";
 import { Input } from "@/components/ui/input";
 import { inventoryLots, itemMasters } from "@/data/inventory-mock";
 import { getAllRecommendations, getItemRisk } from "@/lib/inventory-engine";
@@ -65,6 +66,7 @@ export default function InventoryPage() {
         <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="품목명, 카테고리" className="h-11 rounded-xl border-0 bg-[#f3f6ff]" />
         {scanResult && <p className="mt-2 text-xs text-blue-700">{scanResult}</p>}
       </SectionCard>
+      <MiddlewareSyncSimulator />
 
       <SectionCard title="AI 재고추천" subtitle="권장 근거를 함께 제공합니다">
         <div className="mb-2 rounded-xl border border-emerald-200 bg-emerald-50 p-2">
