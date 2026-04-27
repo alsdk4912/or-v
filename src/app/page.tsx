@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { BarChart3, Camera, Info, ShoppingCart } from "lucide-react";
+import { BarChart3, Camera, Info, Lock, ShoppingCart, User } from "lucide-react";
 
 import { AppTabBar } from "@/components/mobile/design-system";
 import { MiddlewareSyncSimulator } from "@/components/inventory/middleware-sync-simulator";
@@ -27,6 +27,7 @@ const initialInventory: InventoryItem[] = [
 
 export default function DashboardPage() {
   const [userId, setUserId] = useState("");
+  const [password, setPassword] = useState("");
   const [roleMode, setRoleMode] = useState<RoleMode | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
   const [cameraSyncMessage, setCameraSyncMessage] = useState("");
@@ -88,25 +89,44 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#FFFFFF] text-slate-900">
       <main className="mx-auto w-full max-w-[430px] space-y-3 px-4 py-4">
         {!roleMode ? (
-          <section className="rounded-2xl border border-blue-100 bg-white p-4 shadow-[0_6px_18px_rgba(0,82,204,0.08)]">
-            <p className="text-sm font-semibold text-[#0052CC]">OR-V 로그인</p>
-            <p className="mt-1 text-xs text-slate-500">사용자 권한에 따라 필요한 정보만 노출하여 인지 부하를 줄입니다.</p>
-            <p className="mt-2 rounded-lg bg-blue-50 px-2 py-2 text-xs font-semibold text-blue-700">
-              수술실의 새로운 시야, OR-V가 안전을 체크합니다
-            </p>
-            <input
-              value={userId}
-              onChange={(event) => setUserId(event.target.value)}
-              placeholder="ID 입력 (nurse / admin)"
-              className="mt-3 h-12 w-full rounded-xl border border-blue-100 px-3 text-sm"
-            />
+          <section className="rounded-[32px] border border-blue-100 bg-white p-5 shadow-[0_10px_24px_rgba(0,82,204,0.10)]">
+            <div className="text-center">
+              <h1 className="text-[56px] font-extrabold leading-none text-[#101C3A]">
+                OR-<span className="bg-gradient-to-b from-[#0052CC] to-[#2DA8FF] bg-clip-text text-transparent">V</span>
+              </h1>
+              <p className="-mt-1 text-lg font-black text-[#2DA8FF]">✓</p>
+              <p className="mt-1 text-sm font-medium text-slate-600">Surgical Safety, Redefined.</p>
+            </div>
+            <label className="mt-5 flex h-12 items-center gap-2 rounded-2xl border border-slate-200 px-3">
+              <User className="size-4 text-slate-400" />
+              <input
+                value={userId}
+                onChange={(event) => setUserId(event.target.value)}
+                placeholder="Nurse ID"
+                className="w-full bg-transparent text-sm outline-none"
+              />
+            </label>
+            <label className="mt-2 flex h-12 items-center gap-2 rounded-2xl border border-slate-200 px-3">
+              <Lock className="size-4 text-slate-400" />
+              <input
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                type="password"
+                placeholder="Password"
+                className="w-full bg-transparent text-sm outline-none"
+              />
+            </label>
             <button
               type="button"
               onClick={login}
-              className="mt-2 h-12 w-full rounded-xl bg-[#0052CC] text-sm font-semibold text-white"
+              className="mt-4 h-12 w-full rounded-full bg-[#0052CC] text-sm font-bold text-white shadow-[0_10px_16px_rgba(0,82,204,0.25)]"
             >
-              로그인
+              LOG IN
             </button>
+            <p className="mt-3 text-center text-sm text-slate-500">Login with: Fingerprint/Face ID</p>
+            <p className="mt-3 rounded-2xl bg-[#EEF3FC] px-3 py-2 text-center text-base font-semibold text-[#0052CC]">
+              수술실의 새로운 시야, OR-V가 안전을 체크합니다
+            </p>
           </section>
         ) : roleMode === "NURSE_MODE" ? (
           <>
