@@ -59,11 +59,19 @@ export default function ChecklistExecutionPage() {
     if (caseId) initializeCase(caseId);
   }, [caseId, initializeCase]);
 
+  const caseState = cases[caseId] as CaseChecklistState | undefined;
+  const timeOutStageStatus = caseState?.stages["Time Out"].status;
+
+  useEffect(() => {
+    if (selectedStage === "Time Out" && timeOutStageStatus && timeOutStageStatus !== "완료") {
+      setShowTimeOutControlModal(true);
+    }
+  }, [selectedStage, timeOutStageStatus]);
+
   if (!surgery) {
     return <div className="min-h-screen bg-[var(--app-bg)] px-4 py-6 text-sm font-semibold text-slate-700">케이스를 찾을 수 없습니다.</div>;
   }
 
-  const caseState = cases[caseId] as CaseChecklistState | undefined;
   if (!caseState) {
     return (
       <MobileFrame>
@@ -150,12 +158,6 @@ export default function ChecklistExecutionPage() {
 
   const voiceLogs = caseState.voiceLogs.slice(-4);
   const timeOutState = caseState.stages["Time Out"];
-
-  useEffect(() => {
-    if (selectedStage === "Time Out" && timeOutState.status !== "완료") {
-      setShowTimeOutControlModal(true);
-    }
-  }, [selectedStage, timeOutState.status]);
 
   return (
     <MobileFrame>
